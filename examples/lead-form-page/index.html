@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inscreva-se</title>
+  <meta name="description" content="Inscreva-se com seu e-mail para participar.">
+
+  <meta property="og:title" content="Inscreva-se">
+  <meta property="og:description" content="Inscreva-se com seu e-mail para participar.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!--
+    ========================================================================
+    Lead-capture starter (email only).
+
+    This is a copy-pasteable starter. Edit the two placeholder values
+    below, drop the file inside your Cloudflare Pages project at any
+    URL path, and it will immediately:
+
+      1. Capture visit attribution (fbp/fbc/UTMs/gclid) into D1 via the
+         edge middleware — automatic, no code needed.
+      2. Load GA4 as a first-party script via /scripts/gtag.js.
+      3. Fire a PageView to Meta (dual pixel + CAPI, deduped by event_id).
+      4. POST a Lead event to /tracker on form submit, which fires Meta
+         CAPI + GA4 Measurement Protocol server-side with the collected
+         email hashed per Meta's PII spec.
+      5. Swap the form for an inline success state.
+
+    WHAT TO EDIT:
+      - META_PIXEL_ID      → your Meta Pixel numeric ID
+      - GA4_MEASUREMENT_ID → your GA4 Measurement ID (G-XXXXXXXXXX).
+                             If you don't run GA4, delete the two GA4
+                             <script> blocks below — the stack will
+                             skip GA4 cleanly when env vars are unset.
+      - The <h1> / offer copy — make the page yours.
+
+    What NOT to change unless you know why:
+      - /tracker endpoint path
+      - event_id generation (crypto.randomUUID)
+      - The PII field names (em) — Meta expects this exact key
+    ========================================================================
+  -->
+
+  <!-- GA4 (first-party via /scripts/gtag.js which proxies googletagmanager) -->
+  <script async src="/scripts/gtag.js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX'); // ← your GA4 measurement ID
+  </script>
+
+  <!-- Meta Pixel -->
+  <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'YOUR_META_PIXEL_ID'); // ← your Meta Pixel numeric ID
+
+    // PageView — dual fire (pixel + CAPI) with shared event_id for dedup.
+    // /tracker skips event_log inserts for PageView, so D1 stays lean;
+    // only the Meta CAPI call happens server-side. GA4 is pixel-only for
+    // PageView (GA4 MP is conversion-only in this stack).
+    (function () {
+      var pvEventId = (crypto.randomUUID && crypto.randomUUID()) ||
+        (Date.now() + '-' + Math.random().toString(36).slice(2));
+      fbq('track', 'PageView', {}, { eventID: pvEventId });
+      fetch('/tracker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          event_name: 'PageView',
+          event_id: pvEventId,
+          event_time: Math.floor(Date.now() / 1000),
+          event_source_url: window.location.href,
+          user_data: {},
+        }),
+      }).catch(function () {});
+    })();
+  </script>
+
+  <style>
+    *,*::before,*::after { box-sizing: border-box; }
+
+    :root {
+      --ink:       #0a2540;
+      --ink-soft:  #425466;
+      --ink-mute:  #697386;
+      --line:      #e3e8ee;
+      --line-soft: #eef1f6;
+      --surface:   #ffffff;
+      --brand:     #635bff;
+      --brand-2:   #00d4ff;
+      --brand-ink: #ffffff;
+      --bg:        #ffffff;
+      --shadow-sm: 0 1px 2px rgba(10, 37, 64, 0.04);
+      --shadow:    0 4px 12px rgba(10, 37, 64, 0.06), 0 1px 2px rgba(10, 37, 64, 0.04);
+      --shadow-focus: 0 0 0 4px rgba(99, 91, 255, 0.18);
+      --radius:    10px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--bg);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Soft gradient backdrop, top-right + bottom-left */
+    body::before {
+      content: "";
+      position: absolute;
+      top: -20%;
+      right: -10%;
+      width: 70vw;
+      height: 70vw;
+      max-width: 900px;
+      max-height: 900px;
+      background:
+        radial-gradient(closest-side,
+          rgba(99, 91, 255, 0.18),
+          rgba(0, 212, 255, 0.10) 45%,
+          rgba(255, 255, 255, 0) 72%);
+      filter: blur(8px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: "";
+      position: absolute;
+      bottom: -30%;
+      left: -15%;
+      width: 60vw;
+      height: 60vw;
+      max-width: 800px;
+      max-height: 800px;
+      background:
+        radial-gradient(closest-side,
+          rgba(99, 91, 255, 0.10),
+          rgba(255, 255, 255, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 4rem 1.5rem;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 30rem;
+      text-align: left;
+    }
+
+    .wordmark {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      font-weight: 600;
+      font-size: .875rem;
+      letter-spacing: -0.005em;
+      color: var(--ink);
+      margin-bottom: 2.5rem;
+    }
+    .wordmark .dot {
+      width: .5rem;
+      height: .5rem;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.15);
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4.2vw, 2.75rem);
+      line-height: 1.08;
+      letter-spacing: -0.022em;
+      margin: 0 0 1rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    h1 .accent {
+      background: linear-gradient(90deg, var(--brand), var(--brand-2));
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .sub {
+      font-size: 1.0625rem;
+      color: var(--ink-soft);
+      margin: 0 0 2rem;
+      max-width: 28rem;
+    }
+
+    form.signup {
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+    }
+
+    .field {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: .5rem;
+      padding: .375rem;
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 4px);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .field:focus-within {
+      border-color: var(--brand);
+      box-shadow: var(--shadow-focus);
+    }
+
+    .field input[type="email"] {
+      appearance: none;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      padding: .75rem .875rem;
+      font-size: 1rem;
+      color: var(--ink);
+      font-family: inherit;
+      min-width: 0;
+    }
+    .field input[type="email"]::placeholder { color: var(--ink-mute); }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: .9375rem;
+      letter-spacing: -0.005em;
+      padding: .75rem 1.125rem;
+      border-radius: var(--radius);
+      color: var(--brand-ink);
+      background: linear-gradient(180deg, #6f67ff, #544cff);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        0 1px 2px rgba(10, 37, 64, 0.18),
+        0 4px 12px rgba(99, 91, 255, 0.28);
+      transition: transform .08s ease, box-shadow .15s ease, filter .15s ease;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: .375rem;
+    }
+    .btn:hover { filter: brightness(1.04); }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .btn:focus-visible {
+      outline: 0;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        0 0 0 4px rgba(99, 91, 255, 0.25);
+    }
+    .btn svg { width: 1rem; height: 1rem; }
+
+    .fine {
+      margin: .25rem .125rem 0;
+      font-size: .8125rem;
+      color: var(--ink-mute);
+    }
+
+    .error {
+      display: none;
+      margin: .25rem .125rem 0;
+      font-size: .8125rem;
+      color: #c53030;
+    }
+    .error.is-on { display: block; }
+
+    .success {
+      display: none;
+      padding: 1rem 1.125rem;
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 4px);
+      background: #f6f9fc;
+      color: var(--ink);
+      font-size: .9375rem;
+    }
+    .success strong { color: var(--ink); font-weight: 600; }
+    .success.is-on { display: block; }
+
+    @media (max-width: 480px) {
+      main { padding: 3rem 1.25rem; }
+      .field { grid-template-columns: 1fr; }
+      .field input[type="email"] { padding: .875rem; }
+      .btn { justify-content: center; padding: .875rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <div class="wordmark">
+        <span class="dot" aria-hidden="true"></span>
+        Ao vivo
+      </div>
+
+      <h1>Inscreva-se <span class="accent">agora</span>.</h1>
+      <p class="sub">Informe seu e-mail abaixo para participar.</p>
+
+      <form class="signup" id="signup" novalidate>
+        <label class="field" for="email">
+          <input
+            id="email"
+            name="email"
+            type="email"
+            inputmode="email"
+            autocomplete="email"
+            required
+            placeholder="voce@email.com"
+            aria-label="Seu e-mail">
+          <button class="btn" type="submit" id="submit-btn">
+            Inscrever-se
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </label>
+        <p class="fine">Sem spam. Você pode cancelar a qualquer momento.</p>
+        <p class="error" id="form-error" role="alert"></p>
+      </form>
+
+      <div class="success" id="success" role="status" aria-live="polite">
+        <strong>Inscrição recebida.</strong> Enviamos as informações para o seu e-mail.
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (function () {
+    const form = document.getElementById('signup');
+    const success = document.getElementById('success');
+    const errorEl = document.getElementById('form-error');
+    const submitBtn = document.getElementById('submit-btn');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.classList.remove('is-on');
+      errorEl.textContent = '';
+
+      const emailInput = form.elements.email;
+      if (!emailInput.value || !emailInput.checkValidity()) {
+        emailInput.focus();
+        return;
+      }
+      const email = emailInput.value.trim();
+
+      submitBtn.disabled = true;
+      const originalLabel = submitBtn.innerHTML;
+      submitBtn.textContent = 'Enviando…';
+
+      // Every event gets its own ID so the Meta pixel fire (below) and the
+      // server-side CAPI fire (from /tracker) can be deduped by Meta.
+      const eventId = crypto.randomUUID();
+      const eventTime = Math.floor(Date.now() / 1000);
+
+      // Browser-side Meta fire (will be deduped against the server-side fire
+      // when Meta sees the same event_id).
+      try {
+        if (window.fbq) {
+          fbq('track', 'Lead', {}, { eventID: eventId });
+        }
+      } catch (_) {}
+
+      // Server-side fire — this is the authoritative one. /tracker hashes
+      // PII, enriches with captured fbp/fbc/UTMs, and relays to Meta CAPI
+      // + GA4 MP.
+      try {
+        const response = await fetch('/tracker', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_name: 'Lead',
+            event_id: eventId,
+            event_time: eventTime,
+            event_source_url: window.location.href,
+            user_data: { em: email },
+          }),
+        });
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({}));
+          throw new Error(errBody.error || `server returned ${response.status}`);
+        }
+
+        // Show the success state. Swap this for a redirect if you prefer:
+        //   window.location.href = '/obrigado';
+        form.style.display = 'none';
+        success.classList.add('is-on');
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalLabel;
+        errorEl.textContent = 'Algo deu errado. Tente novamente.';
+        errorEl.classList.add('is-on');
+        console.error('Lead submit failed:', err);
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

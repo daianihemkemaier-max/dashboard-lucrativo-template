@@ -1,0 +1,1276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Lucrativo</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #08051a;
+    --card: #0f0a28;
+    --border: rgba(139,92,246,0.25);
+    --text: #e2e8f0;
+    --dim: #94a3b8;
+    --muted: #4a5568;
+    --accent-blue:   #3b82f6;
+    --accent-green:  #22c55e;
+    --accent-amber:  #22d3ee;
+    --accent-red:    #ef4444;
+    --accent-purple: #8b5cf6;
+  }
+  html { background: var(--bg); }
+  body { min-height: 100vh; color: var(--text); font-family: 'Raleway', sans-serif; background: radial-gradient(ellipse 80% 50% at 0% 0%, rgba(88,28,220,0.18) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 100% 60%, rgba(109,40,217,0.12) 0%, transparent 55%), var(--bg); }
+  .mono { font-family: 'Raleway', sans-serif; font-variant-numeric: tabular-nums; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+  .kpi-label { color: var(--dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .kpi-value { font-size: 1.875rem; font-weight: 600; letter-spacing: -0.02em; }
+  .accent-blue   { color: var(--accent-blue);   }
+  .accent-green  { color: var(--accent-green);  }
+  .accent-amber  { color: var(--accent-amber);  }
+  .accent-red    { color: var(--accent-red);    }
+  .accent-purple { color: var(--accent-purple); }
+  .dash-tab { padding: 0.5rem 0.875rem; font-size: 0.875rem; border-bottom: 2px solid transparent; color: var(--dim); cursor: pointer; }
+  .dash-tab.active { color: var(--text); border-color: var(--accent-blue); }
+  .range-btn { padding: 0.375rem 0.75rem; font-size: 0.8125rem; border: 1px solid var(--border); background: var(--card); border-radius: 8px; cursor: pointer; color: var(--dim); }
+  .range-btn.active { background: linear-gradient(270deg,#3b82f6,#8b5cf6,#06b6d4,#3b82f6); background-size: 300% 300%; animation: gradientShift 4s ease infinite; color: #fff; border-color: transparent; }
+  .btn-gradient { background: linear-gradient(270deg,#3b82f6,#8b5cf6,#06b6d4,#3b82f6); background-size: 300% 300%; animation: gradientShift 4s ease infinite; border-color: transparent; }
+  @keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  .row-hover:hover { background: rgba(59,130,246,0.07); }
+  .fade-in { animation: fadeIn 0.35s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Sidebar nav */
+  .nav-btn { width: 100%; text-align: left; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.875rem; color: var(--dim); cursor: pointer; display: flex; align-items: center; gap: 0.625rem; background: transparent; border: none; font-family: 'Raleway', sans-serif; font-weight: 500; transition: background 0.15s, color 0.15s; }
+  .nav-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .nav-btn.active { background: rgba(59,130,246,0.13); color: var(--text); }
+  .nav-btn.active svg { color: var(--accent-blue); }
+
+  /* Funnel */
+  .funnel-stage { border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.875rem 1rem; background: linear-gradient(135deg, rgba(139,92,246,0.35) 0%, rgba(59,130,246,0.35) 100%); border: 1px solid rgba(139,92,246,0.35); }
+  .funnel-connector { display: flex; justify-content: center; padding: 0.3rem 0; }
+  .rate-badge { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.2rem 0.625rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; border: 1px solid var(--border); background: var(--bg); }
+
+  /* Campaign filter selects */
+  .filter-select { background: var(--card); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Raleway', sans-serif; font-size: 0.8125rem; padding: 0.35rem 0.625rem 0.35rem 0.75rem; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; padding-right: 2rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.5rem center; }
+  .filter-select option { background: #0f0a28; }
+
+  /* UTM Generator form controls */
+  .form-input { width: 100%; border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: 'Raleway', sans-serif; transition: border-color 0.15s; }
+  .form-input:focus { border-color: rgba(139,92,246,0.6); }
+  .form-select-lg { background: var(--card); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Raleway', sans-serif; font-size: 0.875rem; padding: 0.5rem 2rem 0.5rem 0.75rem; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; width: 100%; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.5rem center; transition: border-color 0.15s; }
+  .form-select-lg option { background: #0f0a28; }
+  .form-select-lg:focus { border-color: rgba(139,92,246,0.6); }
+</style>
+</head>
+<body>
+
+<!-- ===================== AUTHENTICATED LAYOUT ===================== -->
+<div id="app" class="hidden" style="display:none">
+<div class="flex min-h-screen">
+
+  <!-- SIDEBAR -->
+  <aside class="flex flex-col shrink-0" style="width:212px;background:var(--card);border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow-y:auto;z-index:10">
+
+    <!-- Brand -->
+    <div class="p-4 border-b" style="border-color:var(--border)">
+      <div class="flex items-center gap-3">
+        <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <rect width="36" height="36" rx="9" fill="url(#lg)"/>
+          <line x1="18" y1="8" x2="28" y2="18" stroke="white" stroke-width="0.8" stroke-opacity="0.3"/>
+          <line x1="28" y1="18" x2="18" y2="28" stroke="white" stroke-width="0.8" stroke-opacity="0.3"/>
+          <line x1="18" y1="28" x2="8"  y2="18" stroke="white" stroke-width="0.8" stroke-opacity="0.3"/>
+          <line x1="8"  y1="18" x2="18" y2="8"  stroke="white" stroke-width="0.8" stroke-opacity="0.3"/>
+          <line x1="18" y1="8"  x2="18" y2="18" stroke="white" stroke-width="1.2" stroke-opacity="0.55"/>
+          <line x1="28" y1="18" x2="18" y2="18" stroke="white" stroke-width="1.2" stroke-opacity="0.55"/>
+          <line x1="18" y1="28" x2="18" y2="18" stroke="white" stroke-width="1.2" stroke-opacity="0.55"/>
+          <line x1="8"  y1="18" x2="18" y2="18" stroke="white" stroke-width="1.2" stroke-opacity="0.55"/>
+          <circle cx="18" cy="8"  r="2"   fill="white" fill-opacity="0.75"/>
+          <circle cx="28" cy="18" r="2"   fill="white" fill-opacity="0.75"/>
+          <circle cx="18" cy="28" r="2"   fill="white" fill-opacity="0.75"/>
+          <circle cx="8"  cy="18" r="2"   fill="white" fill-opacity="0.75"/>
+          <circle cx="18" cy="18" r="3.5" fill="white" filter="url(#glow)"/>
+        </svg>
+        <div>
+          <div class="font-semibold text-sm leading-tight">Dashboard Lucrativo</div>
+          <div class="text-xs mt-0.5" style="color:var(--muted)">Receita, leads e atribuição</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nav links -->
+    <nav class="p-3 space-y-0.5 flex-1">
+      <button class="nav-btn active" data-page="visao-geral">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/>
+          <rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/>
+        </svg>
+        Visão Geral
+      </button>
+      <button class="nav-btn" data-page="campanhas">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 5.5h2.5l5.5-3v11l-5.5-3H1a.75.75 0 0 1-.75-.75v-3.5A.75.75 0 0 1 1 5.5z"/>
+          <path d="M3.5 9.5 4.5 13"/><circle cx="13.5" cy="8" r="2"/>
+        </svg>
+        Campanhas
+      </button>
+      <button class="nav-btn" data-page="utm-gerador">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.5 9.5a3.5 3.5 0 0 0 4.95 0l2-2a3.5 3.5 0 0 0-4.95-4.95l-1 1"/>
+          <path d="M9.5 6.5a3.5 3.5 0 0 0-4.95 0l-2 2a3.5 3.5 0 0 0 4.95 4.95l1-1"/>
+        </svg>
+        Gerador de UTM
+      </button>
+    </nav>
+
+    <div class="px-4 py-3 text-xs" style="color:var(--muted);border-top:1px solid var(--border)">Dashboard Lucrativo &middot; Cloudflare</div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <div class="flex-1 min-w-0 flex flex-col">
+
+    <!-- Header -->
+    <header style="background:var(--card);border-bottom:1px solid var(--border)">
+      <div class="px-6 py-4 flex items-center justify-between">
+        <div id="header-title" class="font-semibold" style="color:var(--dim);font-size:0.875rem">Visão Geral</div>
+        <div class="flex items-center gap-2" id="range-picker">
+          <button class="range-btn" data-days="7">7d</button>
+          <button class="range-btn active" data-days="30">30d</button>
+          <button class="range-btn" data-days="90">90d</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ======== PAGE: VISÃO GERAL ======== -->
+    <div id="page-visao-geral">
+      <main class="px-6 py-6 space-y-6">
+
+        <!-- KPIs -->
+        <section class="fade-in">
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="card p-5">
+              <div class="kpi-label">Receita Bruta</div>
+              <div class="kpi-value mono accent-amber mt-1" id="kpi-revenue">—</div>
+              <div class="text-xs mt-1" style="color:var(--muted)" id="kpi-revenue-sub">&nbsp;</div>
+            </div>
+            <div class="card p-5">
+              <div class="kpi-label">Vendas</div>
+              <div class="kpi-value mono mt-1" id="kpi-sales">—</div>
+              <div class="text-xs mt-1" style="color:var(--muted)">Transações pagas</div>
+            </div>
+            <div class="card p-5">
+              <div class="kpi-label">Ticket Médio</div>
+              <div class="kpi-value mono accent-blue mt-1" id="kpi-aov">—</div>
+              <div class="text-xs mt-1" style="color:var(--muted)">Receita / vendas</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Funnel -->
+        <section class="card p-5 fade-in">
+          <div class="font-semibold mb-1">Funil de conversão</div>
+          <div class="text-xs mb-4" style="color:var(--muted)">Eventos registrados no período</div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <div class="flex-1 min-w-[120px] rounded-lg p-4 text-center" style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3)">
+              <div class="text-[11px] uppercase tracking-wider mb-2" style="color:var(--muted)">Visualizações</div>
+              <div class="text-2xl font-semibold mono" id="funnel-pageviews">—</div>
+            </div>
+            <div class="text-center px-1" style="color:var(--muted)">
+              <div class="text-xs" id="funnel-rate-co">—</div>
+              <div style="font-size:18px">→</div>
+            </div>
+            <div class="flex-1 min-w-[120px] rounded-lg p-4 text-center" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3)">
+              <div class="text-[11px] uppercase tracking-wider mb-2" style="color:var(--muted)">Checkouts</div>
+              <div class="text-2xl font-semibold mono" id="funnel-checkouts">—</div>
+            </div>
+            <div class="text-center px-1" style="color:var(--muted)">
+              <div class="text-xs" id="funnel-rate-pu">—</div>
+              <div style="font-size:18px">→</div>
+            </div>
+            <div class="flex-1 min-w-[120px] rounded-lg p-4 text-center" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3)">
+              <div class="text-[11px] uppercase tracking-wider mb-2" style="color:var(--muted)">Compras</div>
+              <div class="text-2xl font-semibold mono accent-green" id="funnel-purchases">—</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Revenue chart -->
+        <section class="card p-5 fade-in">
+          <div class="font-semibold mb-1">Receita ao longo do tempo</div>
+          <div class="text-xs mb-4" style="color:var(--muted)">Receita bruta diária</div>
+          <div class="h-64"><canvas id="chart-revenue"></canvas></div>
+        </section>
+
+        <!-- Products -->
+        <section class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 fade-in">
+          <div class="card p-5">
+            <div class="font-semibold mb-3">Produtos</div>
+            <div id="product-cards" class="space-y-2">
+              <div class="text-sm" style="color:var(--muted)">Carregando…</div>
+            </div>
+          </div>
+          <div class="card p-5">
+            <div class="font-semibold mb-3">Vendas por produto</div>
+            <div class="h-64"><canvas id="chart-products"></canvas></div>
+          </div>
+        </section>
+
+        <!-- Attribution -->
+        <section class="card p-5 fade-in">
+          <div class="font-semibold mb-1">Atribuição de tráfego pago</div>
+          <div class="text-xs mb-4" style="color:var(--muted)">
+            Vendas agrupadas pelo identificador de clique da sessão de origem.
+            <span id="attribution-sync-note" class="ml-1"></span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="rounded-lg p-4" style="border:1px solid var(--border)">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-2 h-2 rounded-full" style="background:var(--accent-blue)"></div>
+                <div class="text-sm font-semibold">Meta</div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 mono">
+                <div><div class="text-[11px] uppercase tracking-wider mb-1" style="color:var(--muted)">Vendas</div><div class="text-xl" id="meta-sales">—</div></div>
+                <div><div class="text-[11px] uppercase tracking-wider mb-1" style="color:var(--muted)">Receita</div><div class="text-xl" id="meta-revenue">—</div></div>
+                <div><div class="text-[11px] uppercase tracking-wider mb-1" style="color:var(--muted)">Gasto</div><div class="text-xl" id="meta-spend">—</div></div>
+                <div><div class="text-[11px] uppercase tracking-wider mb-1" style="color:var(--muted)">CPA</div><div class="text-xl" id="meta-cpa">—</div></div>
+                <div class="col-span-2"><div class="text-[11px] uppercase tracking-wider mb-1" style="color:var(--muted)">ROAS</div><div class="text-2xl" id="meta-roas">—</div></div>
+              </div>
+            </div>
+            <div class="rounded-lg p-4" style="border:1px solid var(--border)">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-2 h-2 rounded-full" style="background:var(--accent-amber)"></div>
+                <div class="text-sm font-semibold">Google</div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 mono">
+                <div><div class="text-[11px] uppercase tracking-wider mb-1" style="color:var(--muted)">Vendas</div><div class="text-xl" id="google-sales">—</div></div>
+                <div><div class="text-[11px] uppercase tracking-wider mb-1" style="color:var(--muted)">Receita</div><div class="text-xl" id="google-revenue">—</div></div>
+              </div>
+            </div>
+            <div class="rounded-lg p-4" style="border:1px solid var(--border)">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-2 h-2 rounded-full" style="background:var(--accent-green)"></div>
+                <div class="text-sm font-semibold">Orgânico</div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 mono">
+                <div><div class="text-[11px] uppercase tracking-wider mb-1" style="color:var(--muted)">Vendas</div><div class="text-xl" id="organic-sales">—</div></div>
+                <div><div class="text-[11px] uppercase tracking-wider mb-1" style="color:var(--muted)">Receita</div><div class="text-xl" id="organic-revenue">—</div></div>
+              </div>
+              <div class="text-[11px] leading-snug mt-3" style="color:var(--muted)">Sem fbclid / gclid na sessão de origem.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- UTM Breakdown -->
+        <section class="card p-5 fade-in">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-semibold">UTM breakdown</div>
+            <div class="text-xs" style="color:var(--muted)">Agrupado de purchase_log</div>
+          </div>
+          <div class="flex gap-1 border-b mb-4 -mx-5 px-5" style="border-color:var(--border)" id="utm-tabs">
+            <div class="dash-tab active" data-dim="utm_source">source</div>
+            <div class="dash-tab" data-dim="utm_medium">medium</div>
+            <div class="dash-tab" data-dim="utm_campaign">campaign</div>
+            <div class="dash-tab" data-dim="utm_content">content</div>
+            <div class="dash-tab" data-dim="utm_term">term</div>
+          </div>
+          <div id="utm-filters" class="flex flex-wrap gap-2 mb-3"></div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="text-xs uppercase tracking-wider border-b" style="color:var(--dim);border-color:var(--border)">
+                <tr>
+                  <th class="text-left py-2 pr-4">Valor</th>
+                  <th class="text-right py-2 pr-4">Vendas</th>
+                  <th class="text-right py-2 pr-4">Receita</th>
+                  <th class="text-right py-2">Ticket</th>
+                </tr>
+              </thead>
+              <tbody id="utm-tbody" class="mono">
+                <tr><td colspan="4" class="py-6 text-center" style="color:var(--muted)">Carregando…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Purchases -->
+        <section class="card p-5 fade-in">
+          <div class="font-semibold mb-1">Compras recentes</div>
+          <div class="text-xs mb-4" style="color:var(--muted)">Clique em uma linha para ver detalhes</div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="text-xs uppercase tracking-wider border-b" style="color:var(--dim);border-color:var(--border)">
+                <tr>
+                  <th class="text-left py-2 pr-4">Quando</th>
+                  <th class="text-left py-2 pr-4">Produto</th>
+                  <th class="text-right py-2 pr-4">Valor</th>
+                  <th class="text-left py-2">Origem</th>
+                </tr>
+              </thead>
+              <tbody id="purchases-tbody">
+                <tr><td colspan="4" class="py-6 text-center" style="color:var(--muted)">Carregando…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <footer class="pt-4 pb-10 text-xs text-center" style="color:var(--muted)">
+          Dashboard Lucrativo &middot; Cloudflare Pages
+        </footer>
+      </main>
+    </div>
+
+    <!-- ======== PAGE: CAMPANHAS ======== -->
+    <div id="page-campanhas" class="hidden">
+      <main class="px-6 py-6 space-y-5">
+
+        <!-- Filter bar -->
+        <div class="flex items-center justify-between flex-wrap gap-3 fade-in">
+          <div class="flex items-center gap-2 flex-wrap">
+            <select class="filter-select" id="filter-tipo"><option value="">Tipo de Campanha</option><option>Conversão</option><option>Remarketing</option><option>Relacionamento</option><option>Descoberta</option></select>
+            <select class="filter-select" id="filter-campanha"><option value="">Campanha</option></select>
+            <select class="filter-select" id="filter-conjunto"><option value="">Conjunto</option></select>
+            <select class="filter-select" id="filter-anuncio"><option value="">Anúncio</option></select>
+          </div>
+          <div class="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" fill="#3b82f6"/>
+            </svg>
+            <span class="font-semibold text-sm">Tráfego · Meta Ads</span>
+          </div>
+        </div>
+
+        <!-- KPI cards -->
+        <section class="grid grid-cols-2 md:grid-cols-5 gap-4 fade-in">
+          <div class="card p-5">
+            <div class="kpi-label">Investimento</div>
+            <div class="kpi-value mono accent-amber mt-1" id="camp-invest">—</div>
+            <div class="text-xs mt-1" style="color:var(--muted)">Gasto no período</div>
+          </div>
+          <div class="card p-5">
+            <div class="kpi-label">Compras</div>
+            <div class="kpi-value mono mt-1" id="camp-compras">—</div>
+            <div class="text-xs mt-1" style="color:var(--muted)">Via Meta atribuído</div>
+          </div>
+          <div class="card p-5">
+            <div class="kpi-label">Custo/Compra</div>
+            <div class="kpi-value mono accent-blue mt-1" id="camp-cpa">—</div>
+            <div class="text-xs mt-1" style="color:var(--muted)">Invest. / compras</div>
+          </div>
+          <div class="card p-5">
+            <div class="kpi-label">Taxa Compra</div>
+            <div class="kpi-value mono accent-green mt-1" id="camp-taxa-compra">—</div>
+            <div class="text-xs mt-1" style="color:var(--muted)">Checkouts → compra</div>
+          </div>
+          <div class="card p-5">
+            <div class="kpi-label">Taxa Conv. Página</div>
+            <div class="kpi-value mono accent-purple mt-1" id="camp-taxa-conv">—</div>
+            <div class="text-xs mt-1" style="color:var(--muted)">Vis. → checkout</div>
+          </div>
+        </section>
+
+        <!-- Funnel + Right metrics -->
+        <section class="card p-6 fade-in">
+          <div class="font-semibold mb-5">Funil de Conversão</div>
+
+          <div style="display:grid;grid-template-columns:1fr 172px;gap:0 2.5rem;align-items:start">
+
+            <!-- Funnel column -->
+            <div class="flex flex-col items-center">
+
+              <!-- Impressões -->
+              <div class="funnel-stage w-full">
+                <div class="text-[11px] uppercase tracking-wider mb-1" style="color:rgba(255,255,255,0.55)">Impressões</div>
+                <div class="text-2xl font-semibold mono" id="f-impressoes">—</div>
+              </div>
+              <div class="funnel-connector">
+                <div class="rate-badge"><span style="color:var(--muted)">CTR</span><span class="accent-blue" id="f-ctr">—</span></div>
+              </div>
+
+              <!-- Cliques -->
+              <div class="funnel-stage" style="width:82%">
+                <div class="text-[11px] uppercase tracking-wider mb-1" style="color:rgba(255,255,255,0.55)">Cliques no Link</div>
+                <div class="text-2xl font-semibold mono" id="f-cliques">—</div>
+              </div>
+              <div class="funnel-connector">
+                <div class="rate-badge"><span style="color:var(--muted)">Connect Rate</span><span class="accent-blue" id="f-connect-rate">—</span></div>
+              </div>
+
+              <!-- Visualizações Página -->
+              <div class="funnel-stage" style="width:65%">
+                <div class="text-[11px] uppercase tracking-wider mb-2" style="color:rgba(255,255,255,0.55)">Visualizações Página</div>
+                <div class="flex items-end justify-between gap-3">
+                  <div>
+                    <div class="text-[10px] mb-0.5" style="color:var(--accent-blue)">● Meta</div>
+                    <div class="text-xl font-semibold mono" id="f-meta-pageviews">—</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-[10px] mb-0.5" style="color:var(--accent-green)">● Site</div>
+                    <div class="text-xl font-semibold mono" id="f-pageviews">—</div>
+                  </div>
+                </div>
+              </div>
+              <div class="funnel-connector">
+                <div class="rate-badge"><span style="color:var(--muted)">Taxa Checkout</span><span class="accent-blue" id="f-taxa-checkout">—</span></div>
+              </div>
+
+              <!-- Checkouts -->
+              <div class="funnel-stage" style="width:48%">
+                <div class="text-[11px] uppercase tracking-wider mb-2" style="color:rgba(255,255,255,0.55)">Checkouts</div>
+                <div class="flex items-end justify-between gap-3">
+                  <div>
+                    <div class="text-[10px] mb-0.5" style="color:var(--accent-blue)">● Meta</div>
+                    <div class="text-xl font-semibold mono" id="f-meta-checkouts">—</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-[10px] mb-0.5" style="color:var(--accent-green)">● Site</div>
+                    <div class="text-xl font-semibold mono" id="f-checkouts">—</div>
+                  </div>
+                </div>
+              </div>
+              <div class="funnel-connector">
+                <div class="rate-badge"><span style="color:var(--muted)">Taxa Compra</span><span class="accent-green" id="f-taxa-compra-badge">—</span></div>
+              </div>
+
+              <!-- Compras -->
+              <div class="funnel-stage" style="width:32%">
+                <div class="text-[11px] uppercase tracking-wider mb-2" style="color:rgba(255,255,255,0.55)">Compras</div>
+                <div class="flex items-end justify-between gap-3">
+                  <div>
+                    <div class="text-[10px] mb-0.5" style="color:var(--accent-blue)">● Meta</div>
+                    <div class="text-xl font-semibold mono" id="f-meta-purchases">—</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-[10px] mb-0.5" style="color:var(--accent-green)">● Site</div>
+                    <div class="text-xl font-semibold mono" id="f-compras-funil">—</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right metrics column — evenly spaced to align with stages -->
+            <div style="display:flex;flex-direction:column;gap:0;padding-top:4px">
+              <div class="text-right" style="padding-bottom:2.1rem">
+                <div class="kpi-label">CPM</div>
+                <div class="text-xl font-semibold mono mt-1" id="f-cpm">—</div>
+              </div>
+              <div class="text-right" style="padding-bottom:2.1rem">
+                <div class="kpi-label">CPC</div>
+                <div class="text-xl font-semibold mono mt-1" id="f-cpc">—</div>
+              </div>
+              <div class="text-right" style="padding-bottom:2.1rem">
+                <div class="kpi-label">Custo Vis. Página</div>
+                <div class="text-xl font-semibold mono mt-1" id="f-custo-vis">—</div>
+              </div>
+              <div class="text-right" style="padding-bottom:2.1rem">
+                <div class="kpi-label">Custo Checkout</div>
+                <div class="text-xl font-semibold mono mt-1" id="f-custo-checkout">—</div>
+              </div>
+              <div class="text-right">
+                <div class="kpi-label">Custo Compra</div>
+                <div class="text-xl font-semibold mono mt-1" id="f-custo-compra">—</div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Campaigns table -->
+        <section class="card p-5 fade-in">
+          <div class="font-semibold mb-1">Campanhas ativas</div>
+          <div class="text-xs mb-4" style="color:var(--muted)">Dados da conta de anúncios Meta, agrupados por campanha</div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="text-xs uppercase tracking-wider border-b" style="color:var(--dim);border-color:var(--border)">
+                <tr>
+                  <th class="text-left py-2 pr-3">Campanha</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Custo</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Impressões</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Cliques</th>
+                  <th class="text-right py-2 pr-3">CTR</th>
+                  <th class="text-right py-2 pr-3">CPC</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Cliques no Link</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Vis. Página</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Checkouts</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Compras</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Custo/Compra</th>
+                  <th class="text-right py-2" style="white-space:nowrap">Taxa Compra</th>
+                </tr>
+              </thead>
+              <tbody id="campaigns-tbody" class="mono">
+                <tr>
+                  <td colspan="12" class="py-10 text-center" style="color:var(--muted)">
+                    Configure o Meta Ads para ver dados de campanhas
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <footer class="pt-4 pb-10 text-xs text-center" style="color:var(--muted)">
+          Dashboard Lucrativo &middot; Cloudflare Pages
+        </footer>
+      </main>
+    </div>
+
+    <!-- ======== PAGE: GERADOR DE UTM ======== -->
+    <div id="page-utm-gerador" class="hidden">
+      <main class="px-6 py-6">
+        <div class="max-w-2xl space-y-5">
+
+          <!-- Intro -->
+          <div class="card p-5 fade-in">
+            <div class="font-semibold mb-1">Gerador de Link com UTM</div>
+            <div class="text-sm leading-relaxed" style="color:var(--dim)">
+              Crie links rastreáveis com fontes e tipos padronizados. Assim o UTM Breakdown do dashboard lê seus dados de forma consistente — sem
+              <span class="mono" style="color:var(--accent-red)">facebook</span>,
+              <span class="mono" style="color:var(--accent-red)">Facebook</span> e
+              <span class="mono" style="color:var(--accent-red)">fb</span>
+              como fontes separadas.
+            </div>
+          </div>
+
+          <!-- Form card -->
+          <div class="card p-5 fade-in space-y-4">
+
+            <!-- URL de destino -->
+            <div>
+              <label class="kpi-label block mb-1">URL de destino</label>
+              <div class="text-xs mb-2" style="color:var(--muted)">Cole o link da sua página de vendas ou captura</div>
+              <input id="utm-url" type="url" class="form-input" placeholder="https://seusite.com.br/oferta">
+            </div>
+
+            <!-- 3-col grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="kpi-label block mb-1">Plataforma</label>
+                <div class="text-xs mb-2" style="color:var(--muted)">Onde o anúncio vai aparecer</div>
+                <select id="utm-source" class="form-select-lg">
+                  <option value="">Selecione…</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="google">Google</option>
+                  <option value="youtube">YouTube</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="email">Email</option>
+                  <option value="whatsapp">WhatsApp</option>
+                </select>
+              </div>
+              <div>
+                <label class="kpi-label block mb-1">Tipo de tráfego</label>
+                <div class="text-xs mb-2" style="color:var(--muted)">Como o visitante chegou até você</div>
+                <select id="utm-medium" class="form-select-lg">
+                  <option value="">Selecione…</option>
+                  <option value="cpc">Anúncio pago (cpc)</option>
+                  <option value="social">Orgânico / Social</option>
+                  <option value="email">Email marketing</option>
+                  <option value="direto">Direto / WhatsApp</option>
+                </select>
+              </div>
+              <div>
+                <label class="kpi-label block mb-1">Nome da campanha</label>
+                <div class="text-xs mb-2" style="color:var(--muted)">Identifique a ação de marketing</div>
+                <input id="utm-campaign" type="text" class="form-input" placeholder="ex: Black Friday Maio">
+                <div id="utm-campaign-slug" class="text-xs mt-1 mono hidden" style="color:var(--muted)"></div>
+              </div>
+            </div>
+
+            <!-- Optional fields -->
+            <div class="pt-3 border-t" style="border-color:var(--border)">
+              <div class="text-xs font-semibold mb-3 uppercase tracking-wider" style="color:var(--muted)">Campos opcionais</div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="kpi-label block mb-1">Conteúdo do anúncio</label>
+                  <div class="text-xs mb-2" style="color:var(--muted)">Diferencia criativos dentro da campanha</div>
+                  <input id="utm-content" type="text" class="form-input" placeholder="ex: video-depoimento-v2">
+                </div>
+                <div>
+                  <label class="kpi-label block mb-1">Palavra-chave</label>
+                  <div class="text-xs mb-2" style="color:var(--muted)">Para campanhas de busca paga no Google</div>
+                  <input id="utm-term" type="text" class="form-input" placeholder="ex: carretilha shimano">
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Generated URL -->
+          <div class="card p-5 fade-in">
+            <div class="kpi-label mb-2">Link gerado</div>
+            <div id="utm-preview" class="rounded-lg px-3 py-3 text-sm mono break-all mb-3 select-all"
+              style="background:var(--bg);border:1px solid var(--border);color:var(--muted);min-height:3.5rem;word-break:break-all">
+              Preencha os campos acima para gerar o link.
+            </div>
+            <div class="flex items-center gap-3 flex-wrap">
+              <button id="utm-copy-btn" class="btn-gradient rounded-lg px-4 py-2 text-sm font-semibold text-white" disabled>Copiar link</button>
+              <button id="utm-reset-btn" class="range-btn text-sm">Limpar campos</button>
+              <span id="utm-copy-feedback" class="text-xs hidden accent-green">&#10003; Copiado!</span>
+            </div>
+          </div>
+
+          <!-- History -->
+          <div class="card p-5 fade-in">
+            <div class="flex items-center justify-between mb-3">
+              <div class="font-semibold text-sm">Histórico</div>
+              <button id="utm-clear-history" class="text-xs" style="color:var(--muted)">Limpar tudo</button>
+            </div>
+            <div id="utm-history" class="space-y-2">
+              <div class="text-sm" style="color:var(--muted)">Os links gerados aparecerão aqui após copiar.</div>
+            </div>
+          </div>
+
+          <div class="pb-10"></div>
+        </div>
+      </main>
+    </div>
+
+  </div><!-- /main area -->
+</div><!-- /flex layout -->
+</div><!-- /#app -->
+
+<!-- Auth prompt -->
+<div id="auth-gate" class="min-h-screen flex items-center justify-center hidden">
+  <div class="card p-6 max-w-sm w-full">
+    <div class="font-semibold mb-2">Chave de acesso</div>
+    <div class="text-sm mb-4" style="color:var(--dim)">Insira a senha fornecida no documento de acesso.</div>
+    <input id="auth-input" type="password" placeholder="Digite sua senha" class="w-full rounded-lg px-3 py-2 text-sm mb-3 font-mono outline-none" style="background:var(--bg);border:1px solid var(--border);color:var(--text)">
+    <button id="auth-submit" class="btn-gradient w-full rounded-lg py-2 text-sm font-semibold text-white">Abrir dashboard</button>
+    <div id="auth-error" class="text-xs mt-2 hidden" style="color:var(--accent-red)">Chave inválida.</div>
+  </div>
+</div>
+
+<!-- Details modal -->
+<div id="details-modal" class="fixed inset-0 hidden items-center justify-center z-50 p-4" style="background:rgba(0,0,0,0.65)" role="dialog" aria-modal="true">
+  <div class="card w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-5 py-3 border-b sticky top-0" style="background:var(--card);border-color:var(--border)">
+      <div>
+        <div id="modal-title" class="font-semibold">Detalhes</div>
+        <div id="modal-subtitle" class="text-xs mt-0.5" style="color:var(--muted)"></div>
+      </div>
+      <button id="modal-close" class="text-2xl leading-none px-2 hover:opacity-70" style="color:var(--dim)" aria-label="Close">&times;</button>
+    </div>
+    <div id="modal-body" class="p-5"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const qs  = sel => document.querySelector(sel);
+  const qsa = sel => document.querySelectorAll(sel);
+
+  // -------- Auth --------
+  const url = new URL(window.location.href);
+  let key = url.searchParams.get('key') || sessionStorage.getItem('dashKey') || '';
+
+  async function openDashboard() {
+    const app = qs('#app');
+    app.style.removeProperty('display');
+    app.classList.remove('hidden');
+    qs('#auth-gate').classList.add('hidden');
+    sessionStorage.setItem('dashKey', key);
+    await loadAll(currentDays);
+  }
+
+  async function probeKey(k) {
+    try { const r = await fetch(`/api/revenue?key=${encodeURIComponent(k)}&days=1`); return r.ok; }
+    catch (_) { return false; }
+  }
+
+  (async function gate() {
+    if (key && await probeKey(key)) { return openDashboard(); }
+    qs('#auth-gate').classList.remove('hidden');
+    qs('#auth-submit').addEventListener('click', async () => {
+      key = qs('#auth-input').value.trim();
+      if (!key) return;
+      if (await probeKey(key)) { openDashboard(); }
+      else { qs('#auth-error').classList.remove('hidden'); }
+    });
+    qs('#auth-input').addEventListener('keydown', e => { if (e.key === 'Enter') qs('#auth-submit').click(); });
+  })();
+
+  // -------- Page navigation --------
+  const pages = { 'visao-geral': qs('#page-visao-geral'), 'campanhas': qs('#page-campanhas'), 'utm-gerador': qs('#page-utm-gerador') };
+  const headerTitles = { 'visao-geral': 'Visão Geral', 'campanhas': 'Campanhas · Meta Ads', 'utm-gerador': 'Gerador de UTM' };
+  let currentPage = 'visao-geral';
+
+  function switchPage(page) {
+    if (!pages[page]) return;
+    currentPage = page;
+    Object.entries(pages).forEach(([k, el]) => el.classList.toggle('hidden', k !== page));
+    qsa('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-page') === page));
+    qs('#header-title').textContent = headerTitles[page];
+  }
+
+  qsa('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchPage(btn.getAttribute('data-page')));
+  });
+
+  // -------- State --------
+  let currentDays = 30;
+  let utmDimension = 'utm_source';
+  let utmFilters = {};
+  let revenueChart = null;
+  let productsChart = null;
+  let allCampaigns = [];
+
+  // -------- Helpers --------
+  const fetchJson = path => fetch(`${path}${path.includes('?') ? '&' : '?'}key=${encodeURIComponent(key)}`).then(r => r.json());
+  const money = (n, cur = 'BRL') => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: cur, maximumFractionDigits: 0 }).format(Number(n || 0));
+  const fmtInt = n => new Intl.NumberFormat('pt-BR').format(Number(n || 0));
+  const fmtDate = ts => new Date(Number(ts) * 1000).toLocaleString('pt-BR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const pct = (n, dec = 2) => (Number(n) * 100).toFixed(dec) + '%';
+
+  // -------- Loaders --------
+  async function loadFunnel(days) {
+    const d = await fetchJson(`/api/funnel?days=${days}`);
+    const pv = d.pageviews || 0;
+    const co = d.checkouts || 0;
+    const pu = d.purchases || 0;
+    qs('#funnel-pageviews').textContent = pv > 0 ? fmtInt(pv) : '0';
+    qs('#funnel-checkouts').textContent = co > 0 ? fmtInt(co) : '0';
+    qs('#funnel-purchases').textContent = pu > 0 ? fmtInt(pu) : '0';
+    qs('#funnel-rate-co').textContent = pv > 0 ? pct(co / pv) : '—';
+    qs('#funnel-rate-pu').textContent = co > 0 ? pct(pu / co) : '—';
+  }
+
+  async function loadRevenue(days) {
+    const d = await fetchJson(`/api/revenue?days=${days}`);
+    qs('#kpi-revenue').textContent = money(d.gross, d.currency);
+    qs('#kpi-revenue-sub').textContent = `${d.days} dias`;
+    qs('#kpi-sales').textContent = fmtInt(d.sales);
+    qs('#kpi-aov').textContent = money(d.aov, d.currency);
+    renderRevenueChart(d.time_series || []);
+  }
+
+  async function loadProducts(days) {
+    const d = await fetchJson(`/api/products?days=${days}`);
+    const container = qs('#product-cards');
+    if (!d.products || d.products.length === 0) {
+      container.innerHTML = '<div class="text-sm" style="color:var(--muted)">Sem produtos ainda.</div>';
+    } else {
+      container.innerHTML = d.products.map(p => `
+        <div class="rounded-lg p-3" style="border:1px solid var(--border)">
+          <div class="text-xs truncate" style="color:var(--muted)">${escapeHtml(p.product_name || p.product_id)}</div>
+          <div class="mt-1 flex items-baseline justify-between">
+            <div class="mono text-lg accent-amber">${money(p.revenue, p.currency || 'BRL')}</div>
+            <div class="mono text-xs" style="color:var(--dim)">${fmtInt(p.sales)} vendas</div>
+          </div>
+        </div>
+      `).join('');
+    }
+    renderProductsChart(d.time_series || []);
+  }
+
+  async function loadAttribution(days) {
+    const d = await fetchJson(`/api/attribution?days=${days}`);
+    qs('#meta-sales').textContent    = fmtInt(d.groups.meta.sales);
+    qs('#meta-revenue').textContent  = money(d.groups.meta.revenue);
+    qs('#meta-spend').textContent    = d.meta_spend > 0 ? money(d.meta_spend) : '—';
+    qs('#meta-cpa').textContent      = d.meta_cpa != null ? money(d.meta_cpa) : '—';
+    qs('#meta-roas').textContent     = d.meta_roas != null ? d.meta_roas.toFixed(2) + 'x' : '—';
+    qs('#google-sales').textContent  = fmtInt(d.groups.google.sales);
+    qs('#google-revenue').textContent = money(d.groups.google.revenue);
+    qs('#organic-sales').textContent = fmtInt(d.groups.organic.sales);
+    qs('#organic-revenue').textContent = money(d.groups.organic.revenue);
+    const note = qs('#attribution-sync-note');
+    note.textContent = d.last_synced_at
+      ? `(último sync ${new Date(d.last_synced_at * 1000).toLocaleString('pt-BR')})`
+      : '';
+  }
+
+  async function loadUtm() {
+    const params = new URLSearchParams({ days: String(currentDays), dimension: utmDimension });
+    for (const [k, v] of Object.entries(utmFilters)) params.set(k, v);
+    const d = await fetchJson(`/api/utm-breakdown?${params.toString()}`);
+    renderUtmFilters();
+    const tbody = qs('#utm-tbody');
+    if (!d.rows || d.rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center" style="color:var(--muted)">Sem compras neste período.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.rows.map(r => `
+      <tr class="row-hover cursor-pointer border-b" style="border-color:var(--border)" data-value="${escapeHtml(r.value)}">
+        <td class="py-2 pr-4">${escapeHtml(r.value)}</td>
+        <td class="py-2 pr-4 text-right">${fmtInt(r.sales)}</td>
+        <td class="py-2 pr-4 text-right accent-amber">${money(r.revenue)}</td>
+        <td class="py-2 text-right" style="color:var(--dim)">${money(r.aov)}</td>
+      </tr>
+    `).join('');
+    qsa('#utm-tbody tr[data-value]').forEach(row => {
+      row.addEventListener('click', () => {
+        const v = row.getAttribute('data-value');
+        if (v && v !== '(not set)') { utmFilters[utmDimension] = v; loadUtm(); }
+      });
+    });
+  }
+
+  function renderUtmFilters() {
+    const container = qs('#utm-filters');
+    const entries = Object.entries(utmFilters);
+    if (entries.length === 0) { container.innerHTML = ''; return; }
+    container.innerHTML = entries.map(([k, v]) => `
+      <button class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs text-white" style="background:var(--accent-blue)" data-filter-key="${k}">
+        <span style="opacity:0.7">${k}:</span> ${escapeHtml(v)} <span class="ml-1">&times;</span>
+      </button>
+    `).join('');
+    qsa('#utm-filters button[data-filter-key]').forEach(btn => {
+      btn.addEventListener('click', () => { delete utmFilters[btn.getAttribute('data-filter-key')]; loadUtm(); });
+    });
+  }
+
+  async function loadCampaigns(days) {
+    const d = await fetchJson(`/api/campaigns-summary?days=${days}`);
+
+    const spend      = d.spend      || 0;
+    const impressions = d.impressions || 0;
+    const clicks     = d.clicks     || 0;
+    const pageviews  = d.pageviews  || 0;
+    const checkouts  = d.checkouts  || 0;
+    const purchases  = d.purchases  || 0;
+
+    qs('#camp-invest').textContent       = spend > 0       ? money(spend)                          : '—';
+    qs('#camp-compras').textContent      = purchases > 0   ? fmtInt(purchases)                     : '—';
+    qs('#camp-cpa').textContent          = (spend > 0 && purchases > 0) ? money(spend / purchases) : '—';
+    qs('#camp-taxa-compra').textContent  = (purchases > 0 && checkouts > 0) ? pct(purchases / checkouts) : '—';
+    qs('#camp-taxa-conv').textContent    = (checkouts > 0 && pageviews > 0) ? pct(checkouts / pageviews)  : '—';
+
+    const metaLPV = d.meta_landing_page_views || 0;
+
+    qs('#f-impressoes').textContent       = impressions > 0 ? fmtInt(impressions) : '—';
+    qs('#f-cliques').textContent          = clicks      > 0 ? fmtInt(clicks)      : '—';
+    qs('#f-meta-pageviews').textContent   = metaLPV     > 0 ? fmtInt(metaLPV)    : '—';
+    qs('#f-pageviews').textContent        = pageviews   > 0 ? fmtInt(pageviews)   : '—';
+    qs('#f-meta-checkouts').textContent   = '—';
+    qs('#f-checkouts').textContent        = checkouts   > 0 ? fmtInt(checkouts)   : '—';
+    qs('#f-meta-purchases').textContent   = '—';
+    qs('#f-compras-funil').textContent    = purchases   > 0 ? fmtInt(purchases)   : '—';
+
+    qs('#f-ctr').textContent              = (clicks > 0 && impressions > 0) ? pct(clicks / impressions)     : '—';
+    qs('#f-connect-rate').textContent     = (pageviews > 0 && clicks > 0)   ? pct(pageviews / clicks)       : '—';
+    qs('#f-taxa-checkout').textContent    = (checkouts > 0 && pageviews > 0) ? pct(checkouts / pageviews)   : '—';
+    qs('#f-taxa-compra-badge').textContent= (purchases > 0 && checkouts > 0) ? pct(purchases / checkouts)   : '—';
+
+    qs('#f-cpm').textContent           = (spend > 0 && impressions > 0) ? money(spend / impressions * 1000) : '—';
+    qs('#f-cpc').textContent           = (spend > 0 && clicks > 0)      ? money(spend / clicks)             : '—';
+    qs('#f-custo-vis').textContent     = (spend > 0 && pageviews > 0)   ? money(spend / pageviews)          : '—';
+    qs('#f-custo-checkout').textContent= (spend > 0 && checkouts > 0)   ? money(spend / checkouts)          : '—';
+    qs('#f-custo-compra').textContent  = (spend > 0 && purchases > 0)   ? money(spend / purchases)          : '—';
+
+    allCampaigns = d.campaigns || [];
+    populateCampaignSelect(allCampaigns);
+    applyFilterCampaigns();
+  }
+
+  function populateCampaignSelect(campaigns) {
+    const sel = qs('#filter-campanha');
+    const prev = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    for (const c of campaigns) {
+      const opt = document.createElement('option');
+      opt.value = c.campaign_id;
+      opt.textContent = c.campaign_name || c.campaign_id;
+      sel.appendChild(opt);
+    }
+    if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  }
+
+  function applyFilterCampaigns() {
+    const tipo      = qs('#filter-tipo').value.trim().toLowerCase();
+    const campId    = qs('#filter-campanha').value;
+    const conjId    = qs('#filter-conjunto').value;
+    const anuncio   = qs('#filter-anuncio').value.trim().toLowerCase();
+
+    // Populate Conjunto options based on selected campaign
+    const conjSel = qs('#filter-conjunto');
+    const prevConj = conjSel.value;
+    while (conjSel.options.length > 1) conjSel.remove(1);
+    if (campId) {
+      const camp = allCampaigns.find(c => c.campaign_id === campId);
+      for (const a of (camp?.adsets || [])) {
+        const opt = document.createElement('option');
+        opt.value = a.adset_id;
+        opt.textContent = a.adset_name || a.adset_id;
+        conjSel.appendChild(opt);
+      }
+      if ([...conjSel.options].some(o => o.value === prevConj)) conjSel.value = prevConj;
+    }
+
+    const filtered = allCampaigns.filter(c => {
+      const name = (c.campaign_name || '').toLowerCase();
+      if (campId  && c.campaign_id !== campId)       return false;
+      if (tipo    && !name.includes(tipo))            return false;
+      if (conjId  && !c.adsets?.some(a => a.adset_id === conjId)) return false;
+      if (anuncio && !name.includes(anuncio))         return false;
+      return true;
+    });
+
+    renderCampaignsTable(filtered);
+  }
+
+  function renderCampaignsTable(campaigns) {
+    const tbody = qs('#campaigns-tbody');
+    if (campaigns.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="12" class="py-10 text-center" style="color:var(--muted)">Configure o Meta Ads para ver dados de campanhas</td></tr>';
+      return;
+    }
+    tbody.innerHTML = campaigns.map(c => {
+      const ctr = c.impressions > 0 ? c.clicks / c.impressions : null;
+      const cpc = c.clicks > 0     ? c.spend  / c.clicks       : null;
+      return `
+        <tr class="row-hover border-b" style="border-color:var(--border)">
+          <td class="py-2 pr-3 font-medium">${escapeHtml(c.campaign_name || c.campaign_id)}</td>
+          <td class="py-2 pr-3 text-right accent-amber">${c.spend > 0 ? money(c.spend) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${c.impressions > 0 ? fmtInt(c.impressions) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${c.clicks > 0 ? fmtInt(c.clicks) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${ctr != null ? pct(ctr) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${cpc != null ? money(cpc) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${c.landing_page_views > 0 ? fmtInt(c.landing_page_views) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${c.pageviews  > 0 ? fmtInt(c.pageviews)  : '—'}</td>
+          <td class="py-2 pr-3 text-right">${c.checkouts  > 0 ? fmtInt(c.checkouts)  : '—'}</td>
+          <td class="py-2 pr-3 text-right">${c.purchases  > 0 ? fmtInt(c.purchases)  : '—'}</td>
+          <td class="py-2 pr-3 text-right">${c.cpa        != null ? money(c.cpa)      : '—'}</td>
+          <td class="py-2 text-right">${c.taxa_compra != null ? pct(c.taxa_compra) : '—'}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function loadPurchases() {
+    const d = await fetchJson('/api/purchases?limit=50');
+    const rows = d.rows || [];
+    const tbody = qs('#purchases-tbody');
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center" style="color:var(--muted)">Sem compras neste período.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map((p, i) => {
+      const origem = [p.utm_source, p.utm_campaign].filter(Boolean).join(' / ') || p.trk || '—';
+      return `
+      <tr class="row-hover border-b cursor-pointer" style="border-color:var(--border)" data-idx="${i}">
+        <td class="py-2 pr-4" style="color:var(--dim);white-space:nowrap">${fmtDate(p.created_at)}</td>
+        <td class="py-2 pr-4">${escapeHtml(p.product_name || p.product_id || '—')}</td>
+        <td class="py-2 pr-4 text-right accent-amber mono">${money(p.value, p.currency || 'BRL')}</td>
+        <td class="py-2 text-xs" style="color:var(--dim)">${escapeHtml(origem)}</td>
+      </tr>`;
+    }).join('');
+    qsa('#purchases-tbody tr[data-idx]').forEach(row => {
+      row.addEventListener('click', () => openPurchaseDetails(rows[parseInt(row.getAttribute('data-idx'), 10)]));
+    });
+  }
+
+  // -------- Modal --------
+  function field(label, value) {
+    if (value == null || value === '' || value === '—') return '';
+    return `
+      <div>
+        <div class="text-xs uppercase tracking-wider mb-1" style="color:var(--muted)">${label}</div>
+        <div class="mono text-sm break-all">${escapeHtml(String(value))}</div>
+      </div>`;
+  }
+
+  function openPurchaseDetails(p) {
+    qs('#modal-title').textContent = 'Detalhes da Compra';
+    qs('#modal-subtitle').textContent = `${fmtDate(p.created_at)} · ${p.raw_email || '(sem email)'} · ${money(p.value, p.currency || 'BRL')}`;
+    qs('#modal-body').innerHTML = `<div class="grid grid-cols-2 gap-4">
+      ${field('Email', p.raw_email)}
+      ${field('Nome', p.raw_name)}
+      ${field('Telefone', p.raw_phone)}
+      ${field('Produto', p.product_name || p.product_id)}
+      ${field('Valor', money(p.value, p.currency || 'BRL'))}
+      ${field('Transaction ID', p.transaction_id)}
+      ${field('Source', p.utm_source || '(direct)')}
+      ${field('Campaign', p.utm_campaign)}
+      ${field('Medium', p.utm_medium)}
+      ${field('Event ID', p.event_id)}
+    </div>`;
+    showModal();
+  }
+
+  function showModal() {
+    const m = qs('#details-modal');
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+  }
+
+  function closeModal() {
+    const m = qs('#details-modal');
+    m.classList.add('hidden');
+    m.classList.remove('flex');
+  }
+
+  // -------- Charts --------
+  const GRID = 'rgba(255,255,255,0.05)';
+  const TICK = '#4a5568';
+
+  function renderRevenueChart(series) {
+    const ctx = qs('#chart-revenue').getContext('2d');
+    if (revenueChart) revenueChart.destroy();
+    revenueChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: series.map(r => r.date),
+        datasets: [{ label: 'Receita', data: series.map(r => r.revenue),
+          borderColor: 'rgb(59,130,246)', backgroundColor: 'rgba(59,130,246,0.12)',
+          fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: TICK, font: { size: 11 } } },
+          y: { grid: { color: GRID }, ticks: { color: TICK, font: { size: 11 } } },
+        },
+      },
+    });
+  }
+
+  function renderProductsChart(series) {
+    const ctx = qs('#chart-products').getContext('2d');
+    if (productsChart) productsChart.destroy();
+    if (!series.length) return;
+
+    const byProduct = {};
+    const dates = new Set();
+    for (const row of series) {
+      const name = row.product_name || row.product_id || 'Produto';
+      if (!byProduct[name]) byProduct[name] = {};
+      byProduct[name][row.date] = Number(row.revenue || 0);
+      dates.add(row.date);
+    }
+    const sortedDates = [...dates].sort();
+    const palette = [
+      'rgba(59,130,246,0.85)', 'rgba(34,197,94,0.85)', 'rgba(245,158,11,0.85)',
+      'rgba(239,68,68,0.85)', 'rgba(139,92,246,0.85)',
+    ];
+    const datasets = Object.entries(byProduct).slice(0, 5).map(([name, bydate], i) => ({
+      label: name,
+      data: sortedDates.map(d => bydate[d] || 0),
+      backgroundColor: palette[i % palette.length],
+      borderRadius: 4,
+      borderSkipped: false,
+    }));
+    productsChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: sortedDates, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: item => ` ${item.dataset.label}: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(item.raw)}`,
+            },
+          },
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { color: TICK, font: { size: 11 } } },
+          y: { stacked: true, grid: { color: GRID }, ticks: { color: TICK, font: { size: 11 }, callback: v => 'R$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) } },
+        },
+      },
+    });
+  }
+
+  // -------- Orchestration --------
+  async function loadAll(days) {
+    currentDays = days;
+    await Promise.all([
+      loadFunnel(days), loadRevenue(days), loadProducts(days), loadAttribution(days),
+      loadUtm(), loadPurchases(), loadCampaigns(days),
+    ]);
+  }
+
+  // -------- UI bindings --------
+  qsa('#range-picker .range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      qsa('#range-picker .range-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadAll(parseInt(btn.getAttribute('data-days'), 10));
+    });
+  });
+  qsa('#utm-tabs .dash-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      qsa('#utm-tabs .dash-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      utmDimension = tab.getAttribute('data-dim');
+      utmFilters = {};
+      loadUtm();
+    });
+  });
+  ['#filter-tipo','#filter-campanha','#filter-conjunto','#filter-anuncio'].forEach(id => {
+    qs(id).addEventListener('change', applyFilterCampaigns);
+  });
+  qs('#modal-close').addEventListener('click', closeModal);
+  qs('#details-modal').addEventListener('click', e => { if (e.target.id === 'details-modal') closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !qs('#details-modal').classList.contains('hidden')) closeModal(); });
+
+  // -------- UTM Generator --------
+  (function () {
+    const sourceEl   = qs('#utm-source');
+    const mediumEl   = qs('#utm-medium');
+    const campaignEl = qs('#utm-campaign');
+    const urlEl      = qs('#utm-url');
+    const contentEl  = qs('#utm-content');
+    const termEl     = qs('#utm-term');
+    const previewEl  = qs('#utm-preview');
+    const copyBtn    = qs('#utm-copy-btn');
+    const resetBtn   = qs('#utm-reset-btn');
+    const feedback   = qs('#utm-copy-feedback');
+    const slugHint   = qs('#utm-campaign-slug');
+
+    const mediumDefaults = {
+      facebook: 'cpc', instagram: 'cpc', google: 'cpc',
+      youtube: 'cpc', tiktok: 'cpc', email: 'email', whatsapp: 'direto',
+    };
+
+    function slugify(s) {
+      return s.trim().toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    }
+
+    function buildUtmUrl() {
+      const baseUrl  = urlEl.value.trim();
+      const source   = sourceEl.value;
+      const medium   = mediumEl.value;
+      const campaign = campaignEl.value;
+      const content  = contentEl.value.trim();
+      const term     = termEl.value.trim();
+
+      if (campaign) {
+        const slug = slugify(campaign);
+        if (slug && slug !== campaign.trim()) {
+          slugHint.textContent = '→ ' + slug;
+          slugHint.classList.remove('hidden');
+        } else {
+          slugHint.classList.add('hidden');
+        }
+      } else {
+        slugHint.classList.add('hidden');
+      }
+
+      if (!baseUrl || !source || !medium || !campaign) {
+        previewEl.textContent = 'Preencha URL de destino, plataforma, tipo de tráfego e nome da campanha.';
+        previewEl.style.color = 'var(--muted)';
+        copyBtn.disabled = true;
+        return null;
+      }
+
+      let url;
+      try { url = new URL(baseUrl.startsWith('http') ? baseUrl : 'https://' + baseUrl); }
+      catch (_) {
+        previewEl.textContent = 'URL inválida. Inclua https:// no início.';
+        previewEl.style.color = 'var(--accent-red)';
+        copyBtn.disabled = true;
+        return null;
+      }
+
+      const slug = slugify(campaign) || campaign;
+      url.searchParams.set('utm_source',   source);
+      url.searchParams.set('utm_medium',   medium);
+      url.searchParams.set('utm_campaign', slug);
+      if (content) url.searchParams.set('utm_content', content);
+      if (term)    url.searchParams.set('utm_term',    term);
+
+      const finalUrl = url.toString();
+      previewEl.textContent = finalUrl;
+      previewEl.style.color = 'var(--text)';
+      copyBtn.disabled = false;
+      copyBtn._url = finalUrl;
+      return finalUrl;
+    }
+
+    sourceEl.addEventListener('change', () => {
+      if (!mediumEl.value && sourceEl.value) {
+        const def = mediumDefaults[sourceEl.value];
+        if (def) mediumEl.value = def;
+      }
+      buildUtmUrl();
+    });
+    mediumEl.addEventListener('change', buildUtmUrl);
+    [campaignEl, urlEl, contentEl, termEl].forEach(el => el.addEventListener('input', buildUtmUrl));
+
+    copyBtn.addEventListener('click', () => {
+      const url = copyBtn._url;
+      if (!url) return;
+      navigator.clipboard.writeText(url).then(() => {
+        feedback.classList.remove('hidden');
+        saveUtmHistory(url, { source: sourceEl.value, medium: mediumEl.value, campaign: slugify(campaignEl.value) });
+        setTimeout(() => feedback.classList.add('hidden'), 2500);
+      });
+    });
+
+    resetBtn.addEventListener('click', () => {
+      [urlEl, campaignEl, contentEl, termEl].forEach(el => { el.value = ''; });
+      [sourceEl, mediumEl].forEach(el => { el.value = ''; });
+      slugHint.classList.add('hidden');
+      buildUtmUrl();
+    });
+
+    qs('#utm-clear-history').addEventListener('click', () => {
+      localStorage.removeItem('utm_history');
+      renderUtmHistory();
+    });
+
+    function saveUtmHistory(url, params) {
+      const hist = JSON.parse(localStorage.getItem('utm_history') || '[]');
+      hist.unshift({ url, params, ts: Date.now() });
+      localStorage.setItem('utm_history', JSON.stringify(hist.slice(0, 10)));
+      renderUtmHistory();
+    }
+
+    function renderUtmHistory() {
+      const hist = JSON.parse(localStorage.getItem('utm_history') || '[]');
+      const container = qs('#utm-history');
+      if (hist.length === 0) {
+        container.innerHTML = '<div class="text-sm" style="color:var(--muted)">Os links gerados aparecerão aqui após copiar.</div>';
+        return;
+      }
+      container.innerHTML = hist.map(h => {
+        const d = new Date(h.ts);
+        const when = d.toLocaleString('pt-BR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return `<div class="rounded-lg p-3 flex items-start justify-between gap-3" style="border:1px solid var(--border)">
+          <div class="flex-1 min-w-0">
+            <div class="text-xs mb-1 flex items-center gap-1.5 flex-wrap">
+              <span class="font-semibold" style="color:var(--dim)">${escapeHtml(h.params.source)}</span>
+              <span style="color:var(--muted)">·</span>
+              <span style="color:var(--muted)">${escapeHtml(h.params.medium)}</span>
+              <span style="color:var(--muted)">·</span>
+              <span style="color:var(--muted)">${escapeHtml(h.params.campaign)}</span>
+              <span class="ml-auto shrink-0" style="color:var(--muted)">${when}</span>
+            </div>
+            <div class="text-xs mono truncate" style="color:var(--muted)">${escapeHtml(h.url)}</div>
+          </div>
+          <button class="shrink-0 text-xs px-2 py-1 rounded" style="border:1px solid var(--border);color:var(--dim);white-space:nowrap" data-copy-url="${escapeHtml(h.url)}">Copiar</button>
+        </div>`;
+      }).join('');
+      qsa('#utm-history [data-copy-url]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          navigator.clipboard.writeText(btn.getAttribute('data-copy-url')).then(() => {
+            const orig = btn.textContent;
+            btn.textContent = '✓ Copiado';
+            setTimeout(() => { btn.textContent = orig; }, 1500);
+          });
+        });
+      });
+    }
+
+    renderUtmHistory();
+  })();
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+})();
+</script>
+</body>
+</html>

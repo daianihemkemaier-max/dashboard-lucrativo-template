@@ -1,0 +1,23 @@
+# Secrets and local config — recipients must never commit these
+wrangler.toml
+wrangler.toml.audit
+.dev.vars
+.env
+.env.*
+
+# Cloudflare build artifacts
+.wrangler/
+.cloudflare/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Node (if a recipient adds any tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

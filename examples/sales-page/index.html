@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lorem Ipsum Dolor — Curso completo</title>
+  <meta name="description" content="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curso completo com módulos, depoimentos e acesso vitalício.">
+
+  <meta property="og:title" content="Lorem Ipsum Dolor — Curso completo">
+  <meta property="og:description" content="Lorem ipsum dolor sit amet, consectetur adipiscing elit.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!--
+    ========================================================================
+    Sales-page starter with the full attribution chain.
+
+    This page demonstrates how the `trk` identifier threads through a
+    purchase so the webhook can enrich the sale with its original source:
+
+        page visit
+          ↓ (middleware captures fbp/fbc/UTMs/gclid into `sessions`)
+        this page
+          ↓ (generates `trk` UUID, POSTs to /checkout-session with `trk`
+          ↓  plus fallback body fields → D1 `checkout_sessions` row)
+        checkout button click
+          ↓ (appends `trk` to the checkout URL as the sales platform's
+          ↓  custom field — `trk` for Eduzz, `xcod` for Hotmart,
+          ↓  `sck` for Kiwify)
+        buyer completes payment on the sales platform
+          ↓
+        sales platform webhook
+          ↓ (POSTs to /webhook/<platform> with `trk` echoed in the payload)
+        webhook handler
+          ↓ (looks up `checkout_sessions` by `trk`, enriches the Meta CAPI
+          ↓  + GA4 + Google Ads fire with the original session attribution)
+
+    WHAT TO EDIT:
+      - META_PIXEL_ID      → your Meta Pixel numeric ID
+      - GA4_MEASUREMENT_ID → your GA4 Measurement ID (G-XXXXXXXXXX).
+                             If you don't run GA4, delete the two GA4
+                             <script> blocks below — the stack will skip
+                             GA4 cleanly when env vars are unset.
+      - CHECKOUT_URL       → your sales platform's real checkout URL
+      - CHECKOUT_PLATFORM  → 'eduzz' | 'hotmart' | 'kiwify' (determines
+                             which URL param carries `trk`)
+      - The <h1> / copy / price / modules / testimonials / FAQ — make
+        the page yours.
+      - assets/hero.webp   → replace with your own hero image (same
+                             filename, or edit the two `assets/hero.webp`
+                             references below).
+    ========================================================================
+  -->
+
+  <link rel="preload" as="image" href="assets/hero.webp">
+
+  <!-- GA4 (first-party via /scripts/gtag.js which proxies googletagmanager) -->
+  <script async src="/scripts/gtag.js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX'); // ← your GA4 measurement ID
+  </script>
+
+  <!-- Meta Pixel -->
+  <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'YOUR_META_PIXEL_ID'); // ← your Meta Pixel numeric ID
+
+    // PageView — dual fire (pixel + CAPI) with shared event_id for dedup.
+    // /tracker skips event_log inserts for PageView, so D1 stays lean;
+    // only the Meta CAPI call happens server-side. GA4 is pixel-only
+    // for PageView (GA4 MP is conversion-only in this stack).
+    (function () {
+      var pvEventId = (crypto.randomUUID && crypto.randomUUID()) ||
+        (Date.now() + '-' + Math.random().toString(36).slice(2));
+      fbq('track', 'PageView', {}, { eventID: pvEventId });
+      fetch('/tracker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          event_name: 'PageView',
+          event_id: pvEventId,
+          event_time: Math.floor(Date.now() / 1000),
+          event_source_url: window.location.href,
+          user_data: {},
+        }),
+      }).catch(function () {});
+    })();
+  </script>
+
+  <style>
+    *,*::before,*::after { box-sizing: border-box; }
+
+    :root {
+      --ink:       #0a2540;
+      --ink-soft:  #425466;
+      --ink-mute:  #697386;
+      --line:      #e3e8ee;
+      --line-soft: #eef1f6;
+      --surface:   #ffffff;
+      --surface-alt:#f6f9fc;
+      --brand:     #635bff;
+      --brand-2:   #00d4ff;
+      --brand-ink: #ffffff;
+      --bg:        #ffffff;
+      --shadow-sm: 0 1px 2px rgba(10, 37, 64, 0.04);
+      --shadow:    0 4px 12px rgba(10, 37, 64, 0.06), 0 1px 2px rgba(10, 37, 64, 0.04);
+      --shadow-lg: 0 30px 60px rgba(10, 37, 64, 0.10), 0 8px 20px rgba(10, 37, 64, 0.06);
+      --shadow-focus: 0 0 0 4px rgba(99, 91, 255, 0.18);
+      --radius:    10px;
+      --radius-lg: 16px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    img { max-width: 100%; display: block; }
+    a { color: inherit; text-decoration: none; }
+    ul { padding: 0; margin: 0; list-style: none; }
+
+    /* Layout */
+    .container { width: 100%; max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
+    .container-sm { max-width: 44rem; }
+
+    /* Top nav */
+    .nav {
+      position: sticky;
+      top: 0; z-index: 20;
+      backdrop-filter: saturate(180%) blur(10px);
+      -webkit-backdrop-filter: saturate(180%) blur(10px);
+      background: rgba(255,255,255,.72);
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .wordmark {
+      display: inline-flex; align-items: center; gap: .5rem;
+      font-weight: 600; font-size: .9375rem; letter-spacing: -0.005em;
+    }
+    .wordmark .dot {
+      width: .55rem; height: .55rem; border-radius: 999px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.15);
+    }
+
+    /* Typography */
+    h1,h2,h3 { margin: 0; color: var(--ink); letter-spacing: -0.022em; }
+    h1 { font-size: clamp(2.25rem, 5vw, 3.5rem); line-height: 1.06; font-weight: 700; }
+    h1 .accent {
+      background: linear-gradient(90deg, var(--brand), var(--brand-2));
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+    }
+    h2 { font-size: clamp(1.75rem, 3.2vw, 2.25rem); line-height: 1.15; font-weight: 700; }
+    h3 { font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em; }
+    p  { margin: 0; color: var(--ink-soft); }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: .75rem; font-weight: 600;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--brand);
+      margin-bottom: .875rem;
+    }
+
+    /* Buttons */
+    .btn {
+      appearance: none; border: 0; cursor: pointer;
+      font-family: inherit; font-weight: 600;
+      font-size: .9375rem; letter-spacing: -0.005em;
+      padding: .75rem 1.125rem; border-radius: var(--radius);
+      transition: transform .08s ease, box-shadow .15s ease, filter .15s ease, background .15s ease;
+      display: inline-flex; align-items: center; gap: .375rem;
+      white-space: nowrap;
+    }
+    .btn svg { width: 1rem; height: 1rem; }
+    .btn-primary {
+      color: var(--brand-ink);
+      background: linear-gradient(180deg, #6f67ff, #544cff);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        0 1px 2px rgba(10, 37, 64, 0.18),
+        0 4px 12px rgba(99, 91, 255, 0.28);
+    }
+    .btn-primary:hover { filter: brightness(1.04); }
+    .btn-primary:active { transform: translateY(1px); }
+    .btn-primary:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(99,91,255,.25); }
+    .btn-lg { padding: 1rem 1.5rem; font-size: 1rem; border-radius: 12px; }
+    .btn-ghost {
+      background: transparent; color: var(--ink);
+      padding: .5rem .75rem;
+    }
+    .btn-ghost:hover { color: var(--brand); }
+
+    /* Sections */
+    .section { padding: 6rem 0; position: relative; }
+    .section-alt { background: var(--surface-alt); }
+    .section-head { text-align: center; max-width: 40rem; margin: 0 auto 3rem; }
+    .section-head p { margin-top: .75rem; font-size: 1.0625rem; }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      padding: 6rem 0 5rem;
+      overflow: hidden;
+    }
+    .hero::before, .hero::after {
+      content: ""; position: absolute; pointer-events: none;
+    }
+    .hero::before {
+      top: -20%; right: -10%;
+      width: 65vw; height: 65vw; max-width: 900px; max-height: 900px;
+      background: radial-gradient(closest-side,
+        rgba(99, 91, 255, 0.22),
+        rgba(0, 212, 255, 0.10) 45%,
+        rgba(255, 255, 255, 0) 72%);
+      filter: blur(6px);
+    }
+    .hero::after {
+      bottom: -40%; left: -15%;
+      width: 55vw; height: 55vw; max-width: 800px; max-height: 800px;
+      background: radial-gradient(closest-side,
+        rgba(99, 91, 255, 0.10),
+        rgba(255, 255, 255, 0) 70%);
+    }
+    .hero > .container {
+      position: relative; z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      gap: 3.5rem;
+      align-items: center;
+    }
+    .hero-copy h1 { max-width: 18ch; }
+    .hero p.sub {
+      font-size: 1.125rem;
+      max-width: 34rem; margin: 1.25rem 0 2rem;
+    }
+    .hero .fine {
+      margin-top: 1rem; font-size: .8125rem; color: var(--ink-mute);
+    }
+    .hero-art {
+      position: relative;
+    }
+    .hero-art::before {
+      content: "";
+      position: absolute; inset: -6px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(99,91,255,.35), rgba(0,212,255,.28));
+      filter: blur(18px); opacity: .55; z-index: 0;
+    }
+    .hero-art img {
+      position: relative; z-index: 1;
+      width: 100%; height: auto;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-lg);
+      background: var(--surface);
+      display: block;
+    }
+
+    /* Modules */
+    .modules {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;
+    }
+    .module {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-sm);
+      transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+    }
+    .module:hover {
+      border-color: #d7deea;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    .module .num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2rem; height: 2rem; border-radius: 8px;
+      background: linear-gradient(135deg, rgba(99,91,255,.12), rgba(0,212,255,.12));
+      color: var(--brand);
+      font-weight: 700; font-size: .8125rem; letter-spacing: .02em;
+      margin-bottom: 1rem;
+    }
+    .module h3 { margin-bottom: .5rem; }
+    .module p { font-size: .9375rem; }
+    .module ul {
+      margin-top: 1rem; padding-top: 1rem;
+      border-top: 1px solid var(--line-soft);
+      display: grid; gap: .5rem;
+    }
+    .module li {
+      font-size: .875rem; color: var(--ink-soft);
+      display: flex; gap: .5rem; align-items: flex-start;
+    }
+    .module li::before {
+      content: ""; flex: none;
+      width: 1rem; height: 1rem; margin-top: .15rem;
+      border-radius: 999px;
+      background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='8' fill='%23635bff' fill-opacity='.12'/><path d='M5 8.2l2 2 4-4.2' fill='none' stroke='%23635bff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/contain no-repeat;
+    }
+
+    /* Testimonials */
+    .testimonials {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+    }
+    .testimonial {
+      margin: 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-sm);
+      display: flex; flex-direction: column; gap: 1.25rem;
+    }
+    .testimonial blockquote {
+      margin: 0; font-size: .9375rem; line-height: 1.6; color: var(--ink);
+      position: relative;
+    }
+    .testimonial blockquote::before {
+      content: "\201C";
+      display: block;
+      font-size: 2.25rem; line-height: 1; font-weight: 700;
+      color: var(--brand); margin-bottom: .25rem;
+    }
+    .testimonial figcaption {
+      display: flex; align-items: center; gap: .75rem;
+      padding-top: 1rem; border-top: 1px solid var(--line-soft);
+    }
+    .avatar {
+      flex: none;
+      width: 2.5rem; height: 2.5rem; border-radius: 999px;
+      background: linear-gradient(135deg, #635bff 0%, #00d4ff 100%);
+      color: #fff; font-weight: 600; font-size: .8125rem;
+      display: inline-flex; align-items: center; justify-content: center;
+      letter-spacing: .02em;
+    }
+    .testimonial figcaption strong { display: block; font-size: .9375rem; color: var(--ink); }
+    .testimonial figcaption span { font-size: .8125rem; color: var(--ink-mute); }
+
+    /* Big quote */
+    .quote-wrap { text-align: center; }
+    .big-quote {
+      margin: 0 auto; max-width: 44rem;
+      font-size: clamp(1.375rem, 2.6vw, 1.875rem);
+      line-height: 1.3;
+      font-weight: 500;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+    }
+    .big-quote::before {
+      content: "\201C";
+      display: block;
+      font-size: 4rem; line-height: 1; font-weight: 700;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      margin-bottom: 1rem;
+    }
+
+    /* Price card */
+    .price-wrap {
+      max-width: 34rem; margin: 0 auto;
+      position: relative;
+    }
+    .price-wrap::before {
+      content: "";
+      position: absolute; inset: -2px;
+      border-radius: calc(var(--radius-lg) + 2px);
+      background: linear-gradient(135deg, rgba(99,91,255,.45), rgba(0,212,255,.35));
+      filter: blur(14px);
+      opacity: .5; z-index: 0;
+    }
+    .price-card {
+      position: relative; z-index: 1;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 2.25rem;
+      box-shadow: var(--shadow-lg);
+    }
+    .price-card h2 { margin-bottom: .5rem; font-size: 1.5rem; }
+    .deliverables {
+      display: grid; gap: .625rem;
+      margin: 1.5rem 0;
+      padding-top: 1.5rem; border-top: 1px solid var(--line-soft);
+    }
+    .deliverables li {
+      display: flex; gap: .625rem; align-items: flex-start;
+      font-size: .9375rem; color: var(--ink-soft);
+    }
+    .deliverables li::before {
+      content: ""; flex: none;
+      width: 1.125rem; height: 1.125rem; margin-top: .1rem;
+      background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='8' fill='%23635bff'/><path d='M4.75 8.25l2.25 2.25 4.25-4.5' fill='none' stroke='white' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/contain no-repeat;
+    }
+    .price {
+      display: flex; align-items: baseline; gap: .375rem;
+      margin: 1.5rem 0;
+    }
+    .price .currency { font-size: 1.125rem; color: var(--ink-mute); font-weight: 500; }
+    .price .amount { font-size: 3rem; font-weight: 700; letter-spacing: -0.03em; color: var(--ink); line-height: 1; }
+    .price .interval { margin-left: .5rem; font-size: .875rem; color: var(--ink-mute); }
+    .price-card .btn-primary { width: 100%; justify-content: center; }
+    .price-card .guarantee {
+      margin-top: 1rem; font-size: .8125rem; color: var(--ink-mute); text-align: center;
+    }
+
+    /* Professor */
+    .professor-card {
+      display: grid; grid-template-columns: auto 1fr; gap: 2rem;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      box-shadow: var(--shadow-sm);
+      max-width: 48rem; margin: 0 auto;
+    }
+    .avatar-lg {
+      width: 7rem; height: 7rem; border-radius: 999px;
+      background: linear-gradient(135deg, #635bff 0%, #00d4ff 100%);
+      color: #fff; font-weight: 700; font-size: 1.75rem;
+      display: inline-flex; align-items: center; justify-content: center;
+      letter-spacing: .02em;
+      box-shadow: 0 10px 30px rgba(99,91,255,.28);
+    }
+    .professor-card h3 { font-size: 1.375rem; margin-bottom: .25rem; }
+    .professor-card .role { font-size: .9375rem; color: var(--brand); margin-bottom: .875rem; font-weight: 500; }
+    .creds {
+      margin-top: 1rem;
+      display: flex; flex-wrap: wrap; gap: .5rem;
+    }
+    .creds li {
+      font-size: .75rem; padding: .3rem .625rem;
+      border: 1px solid var(--line); border-radius: 999px;
+      color: var(--ink-soft); background: var(--surface-alt);
+    }
+
+    /* FAQ */
+    .faq { max-width: 44rem; margin: 0 auto; display: grid; gap: .5rem; }
+    details.faq-item {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0 1.25rem;
+      transition: border-color .15s ease;
+    }
+    details.faq-item[open] { border-color: #d7deea; }
+    details.faq-item summary {
+      list-style: none; cursor: pointer;
+      padding: 1.125rem 0;
+      font-weight: 600; font-size: 1rem; color: var(--ink);
+      display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    }
+    details.faq-item summary::-webkit-details-marker { display: none; }
+    details.faq-item summary::after {
+      content: "";
+      width: 1rem; height: 1rem; flex: none;
+      background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 6l4 4 4-4' stroke='%23697386' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>") center/contain no-repeat;
+      transition: transform .2s ease;
+    }
+    details.faq-item[open] summary::after { transform: rotate(180deg); }
+    details.faq-item p {
+      padding: 0 0 1.25rem; font-size: .9375rem; color: var(--ink-soft);
+    }
+
+    /* Final CTA */
+    .cta-final {
+      text-align: center;
+      background: linear-gradient(135deg, rgba(99,91,255,.06), rgba(0,212,255,.04));
+      border-top: 1px solid var(--line-soft);
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    /* Footer */
+    footer {
+      padding: 2.5rem 0; text-align: center;
+      font-size: .8125rem; color: var(--ink-mute);
+      border-top: 1px solid var(--line-soft);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .section { padding: 4.5rem 0; }
+      .hero { padding: 4rem 0 3.5rem; }
+      .hero > .container {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+        text-align: center;
+      }
+      .hero-copy h1 { margin-left: auto; margin-right: auto; }
+      .hero p.sub { margin-left: auto; margin-right: auto; }
+      .modules { grid-template-columns: 1fr; }
+      .testimonials { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .nav-inner { height: 56px; }
+      .professor-card { grid-template-columns: 1fr; text-align: center; gap: 1.25rem; padding: 1.75rem; }
+      .professor-card .avatar-lg { margin: 0 auto; }
+      .creds { justify-content: center; }
+      .price-card { padding: 1.75rem; }
+      .price .amount { font-size: 2.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="wordmark" href="/">
+        <span class="dot" aria-hidden="true"></span>
+        Lorem Ipsum
+      </a>
+      <a class="btn btn-ghost" href="#preco">Inscrever-se</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-copy">
+          <span class="eyebrow">Novo lançamento</span>
+          <h1>Lorem ipsum dolor <span class="accent">sit amet</span>, consectetur adipiscing</h1>
+          <p class="sub">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+          <a class="btn btn-primary btn-lg" href="#preco">
+            Garantir minha vaga
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+          <p class="fine">Lorem ipsum · Acesso vitalício · 7 dias de garantia</p>
+        </div>
+        <div class="hero-art">
+          <img
+            src="assets/hero.webp"
+            alt="Imagem de hero da página de vendas"
+            width="1200" height="900"
+            decoding="async"
+            fetchpriority="high">
+        </div>
+      </div>
+    </section>
+
+    <!-- MÓDULOS -->
+    <section class="section" id="curso">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">O curso</span>
+          <h2>Módulos e entregáveis</h2>
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam.</p>
+        </div>
+
+        <div class="modules">
+          <article class="module">
+            <div class="num">01</div>
+            <h3>Lorem ipsum dolor</h3>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt.</p>
+            <ul>
+              <li>Lorem ipsum dolor sit amet</li>
+              <li>Consectetur adipiscing elit</li>
+              <li>Sed do eiusmod tempor</li>
+            </ul>
+          </article>
+
+          <article class="module">
+            <div class="num">02</div>
+            <h3>Consectetur adipiscing</h3>
+            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex.</p>
+            <ul>
+              <li>Duis aute irure dolor</li>
+              <li>Reprehenderit in voluptate</li>
+              <li>Velit esse cillum dolore</li>
+            </ul>
+          </article>
+
+          <article class="module">
+            <div class="num">03</div>
+            <h3>Eiusmod tempor incididunt</h3>
+            <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit.</p>
+            <ul>
+              <li>Anim id est laborum</li>
+              <li>Sed ut perspiciatis unde</li>
+              <li>Omnis iste natus error</li>
+            </ul>
+          </article>
+
+          <article class="module">
+            <div class="num">04</div>
+            <h3>Ut labore et dolore</h3>
+            <p>Sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae.</p>
+            <ul>
+              <li>Ab illo inventore veritatis</li>
+              <li>Quasi architecto beatae</li>
+              <li>Vitae dicta sunt explicabo</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- DEPOIMENTOS -->
+    <section class="section section-alt" id="depoimentos">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Depoimentos</span>
+          <h2>O que os alunos estão dizendo</h2>
+        </div>
+
+        <div class="testimonials">
+          <figure class="testimonial">
+            <blockquote>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.</blockquote>
+            <figcaption>
+              <span class="avatar" aria-hidden="true">MS</span>
+              <div>
+                <strong>Mariana Silva</strong>
+                <span>Lorem ipsum dolor</span>
+              </div>
+            </figcaption>
+          </figure>
+
+          <figure class="testimonial">
+            <blockquote>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.</blockquote>
+            <figcaption>
+              <span class="avatar" aria-hidden="true">RC</span>
+              <div>
+                <strong>Rafael Costa</strong>
+                <span>Consectetur adipiscing</span>
+              </div>
+            </figcaption>
+          </figure>
+
+          <figure class="testimonial">
+            <blockquote>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla.</blockquote>
+            <figcaption>
+              <span class="avatar" aria-hidden="true">JA</span>
+              <div>
+                <strong>Juliana Alves</strong>
+                <span>Sed do eiusmod</span>
+              </div>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- PARA QUEM É (QUOTE) -->
+    <section class="section">
+      <div class="container quote-wrap">
+        <span class="eyebrow">Para quem é</span>
+        <blockquote class="big-quote">
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit — para quem quer ut enim ad minim veniam e nostrud exercitation ullamco.
+        </blockquote>
+      </div>
+    </section>
+
+    <!-- PREÇO -->
+    <section class="section section-alt" id="preco">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Investimento</span>
+          <h2>Garanta sua vaga</h2>
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+        </div>
+
+        <div class="price-wrap">
+          <div class="price-card">
+            <h2>Curso completo</h2>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+
+            <ul class="deliverables">
+              <li>Lorem ipsum dolor sit amet consectetur</li>
+              <li>Adipiscing elit, sed do eiusmod tempor</li>
+              <li>Incididunt ut labore et dolore magna</li>
+              <li>Aliqua ut enim ad minim veniam</li>
+              <li>Quis nostrud exercitation ullamco laboris</li>
+              <li>Acesso vitalício e atualizações gratuitas</li>
+            </ul>
+
+            <div class="price">
+              <span class="currency">R$</span>
+              <span class="amount">497</span>
+              <span class="interval">à vista · ou 12× R$ 49,70</span>
+            </div>
+
+            <a id="checkout-btn" class="btn btn-primary btn-lg" href="#">
+              Quero me inscrever
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+            <p class="guarantee">7 dias de garantia incondicional · pagamento seguro</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFESSOR -->
+    <section class="section" id="professor">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Quem ensina</span>
+          <h2>O professor</h2>
+        </div>
+
+        <div class="professor-card">
+          <span class="avatar-lg" aria-hidden="true">LI</span>
+          <div class="bio">
+            <h3>Lorem Ipsum</h3>
+            <div class="role">Especialista em Lorem Ipsum</div>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
+            <ul class="creds">
+              <li>10+ anos de experiência</li>
+              <li>Lorem ipsum dolor</li>
+              <li>Consectetur adipiscing</li>
+              <li>Eiusmod tempor</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section section-alt" id="faq">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Dúvidas frequentes</span>
+          <h2>FAQ</h2>
+        </div>
+
+        <div class="faq">
+          <details class="faq-item">
+            <summary>Lorem ipsum dolor sit amet?</summary>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Consectetur adipiscing elit?</summary>
+            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Sed do eiusmod tempor incididunt?</summary>
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Ut labore et dolore magna aliqua?</summary>
+            <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Quis nostrud exercitation ullamco?</summary>
+            <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="section cta-final">
+      <div class="container">
+        <div class="section-head">
+          <h2>Pronto para começar?</h2>
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+        </div>
+        <div style="text-align:center;">
+          <a class="btn btn-primary btn-lg" href="#preco">
+            Quero me inscrever
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      &copy; 2026 Lorem Ipsum · Todos os direitos reservados
+    </div>
+  </footer>
+
+  <!-- Attribution wiring -->
+  <script>
+  (function () {
+    // =====================================================================
+    // CONFIGURATION — edit these two values before deploying.
+    // =====================================================================
+
+    // Where the "Quero me inscrever" button takes the buyer. This is the
+    // URL your sales platform gave you when you created the product.
+    const CHECKOUT_URL = 'https://sun.eduzz.com/YOUR_PRODUCT_ID';
+
+    // Which sales platform runs your checkout. Determines which URL
+    // parameter name carries `trk` into the platform's webhook payload:
+    //   'eduzz'   → ?trk=<value>       (Eduzz custom tracker field 'code1')
+    //   'hotmart' → ?xcod=<value>      (Hotmart custom source code)
+    //   'kiwify'  → ?sck=<value>       (Kiwify source code param)
+    //
+    // UTM forwarding also varies by platform. Eduzz and Kiwify echo
+    // `utm_*` URL params through to their webhook JSON; Hotmart does NOT,
+    // so for Hotmart we pack the UTMs into the `sck` slot as a pipe-
+    // joined, URL-encoded bundle that the adapter unpacks server-side.
+    const CHECKOUT_PLATFORM = 'eduzz';
+
+    // =====================================================================
+    // Below here is the attribution wiring. You generally shouldn't need
+    // to change any of this unless you know what you're doing.
+    // =====================================================================
+
+    const TRK_FIELD_BY_PLATFORM = {
+      eduzz:   'trk',
+      hotmart: 'xcod',
+      kiwify:  'sck',
+    };
+
+    // Generate a new `trk` per page visit, or reuse one from a previous
+    // visit if the buyer is returning (e.g. bounced off checkout and came
+    // back). Stored in sessionStorage so it survives refreshes within the
+    // same tab but not across days.
+    const STORAGE_KEY = 'krob_trk';
+    let trk = sessionStorage.getItem(STORAGE_KEY);
+    if (!trk) {
+      trk = crypto.randomUUID();
+      sessionStorage.setItem(STORAGE_KEY, trk);
+    }
+
+    // Parse URL query params once so we can pass UTMs along as fallback.
+    // The edge middleware already captured these into the `sessions` row
+    // automatically; passing them in the POST body is defensive.
+    const urlParams = new URLSearchParams(window.location.search);
+    const utmSource   = urlParams.get('utm_source')   || '';
+    const utmMedium   = urlParams.get('utm_medium')   || '';
+    const utmCampaign = urlParams.get('utm_campaign') || '';
+    const utmContent  = urlParams.get('utm_content')  || '';
+    const utmTerm     = urlParams.get('utm_term')     || '';
+
+    // Fire the InitiateCheckout event to both browser (pixel) and
+    // server-side (/tracker) with the same event_id so Meta dedupes them.
+    function fireInitiateCheckout() {
+      const eventId = crypto.randomUUID();
+      const eventTime = Math.floor(Date.now() / 1000);
+
+      try {
+        if (window.fbq) {
+          fbq('track', 'InitiateCheckout', {}, { eventID: eventId });
+        }
+      } catch (_) {}
+
+      // Server-side fire — uses sendBeacon so the request survives the
+      // navigation to the checkout URL.
+      try {
+        const payload = JSON.stringify({
+          event_name: 'InitiateCheckout',
+          event_id: eventId,
+          event_time: eventTime,
+          event_source_url: window.location.href,
+          user_data: {},
+        });
+        navigator.sendBeacon('/tracker', new Blob([payload], { type: 'application/json' }));
+      } catch (_) {}
+    }
+
+    // POST checkout session data to D1 so the webhook handler can later
+    // look it up by `trk`. This writes fbp/fbc/utms/gclid into a row that
+    // the sales-platform webhook will enrich. Runs once on page load.
+    async function persistCheckoutSession() {
+      try {
+        await fetch('/checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            trk,
+            utm_source: utmSource,
+            utm_medium: utmMedium,
+            utm_campaign: utmCampaign,
+            utm_content: utmContent,
+            utm_term: utmTerm,
+            event_source_url: window.location.href,
+          }),
+        });
+      } catch (err) {
+        console.warn('checkout-session persist failed:', err);
+      }
+    }
+
+    persistCheckoutSession();
+
+    // Wire up ONLY the price-card CTA to fire InitiateCheckout and
+    // navigate to the real checkout URL. The hero and final-CTA buttons
+    // are scroll-to-`#preco` anchors; leaving those alone is intentional
+    // — buyers self-select by scrolling to the price section.
+    const btn = document.getElementById('checkout-btn');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        fireInitiateCheckout();
+
+        const paramName = TRK_FIELD_BY_PLATFORM[CHECKOUT_PLATFORM] || 'trk';
+        const params = new URLSearchParams();
+        params.set(paramName, trk);
+
+        if (CHECKOUT_PLATFORM === 'hotmart') {
+          // Hotmart does NOT forward URL `utm_*` params into its webhook
+          // payload — only `origin.xcod` (our trk) and `origin.sck` come
+          // through. Pack the UTMs into sck as a pipe-joined, URL-encoded
+          // bundle so the webhook adapter can recover them.
+          // Skipped entirely when no UTMs are present so Hotmart's default
+          // traffic-source enum (e.g. "HOTMART_PRODUCT_PAGE") keeps flowing.
+          const anyUtm = utmSource || utmMedium || utmCampaign || utmContent || utmTerm;
+          if (anyUtm) {
+            const sckBundle = [utmSource, utmMedium, utmCampaign, utmContent, utmTerm]
+              .map(encodeURIComponent)
+              .join('|');
+            params.set('sck', sckBundle);
+          }
+        } else {
+          // Eduzz + Kiwify forward `utm_*` query params through to their
+          // webhook JSON, so append them verbatim for server-side attribution.
+          if (utmSource)   params.set('utm_source',   utmSource);
+          if (utmMedium)   params.set('utm_medium',   utmMedium);
+          if (utmCampaign) params.set('utm_campaign', utmCampaign);
+          if (utmContent)  params.set('utm_content',  utmContent);
+          if (utmTerm)     params.set('utm_term',     utmTerm);
+        }
+
+        const separator = CHECKOUT_URL.includes('?') ? '&' : '?';
+        const destination = `${CHECKOUT_URL}${separator}${params.toString()}`;
+
+        // Small delay so the sendBeacon has time to leave the queue. Most
+        // browsers flush beacons on unload anyway, but this is belt-and-
+        // suspenders for slow Android Chrome.
+        setTimeout(() => { window.location.href = destination; }, 80);
+      });
+    }
+  })();
+  </script>
+
+</body>
+</html>
