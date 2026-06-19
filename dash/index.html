@@ -1165,25 +1165,29 @@
         .replace(/^-|-$/g, '');
     }
 
+    function sanitizeField(el) {
+      const pos = el.selectionStart;
+      const before = el.value;
+      const after = before.toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-');
+      if (after !== before) {
+        el.value = after;
+        el.setSelectionRange(Math.min(pos, after.length), Math.min(pos, after.length));
+      }
+    }
+
     function buildUtmUrl() {
       const baseUrl  = urlEl.value.trim();
       const source   = sourceEl.value;
       const medium   = mediumEl.value;
       const campaign = campaignEl.value;
-      const content  = contentEl.value.trim();
-      const term     = termEl.value.trim();
+      const content  = slugify(contentEl.value);
+      const term     = slugify(termEl.value);
 
-      if (campaign) {
-        const slug = slugify(campaign);
-        if (slug && slug !== campaign.trim()) {
-          slugHint.textContent = '→ ' + slug;
-          slugHint.classList.remove('hidden');
-        } else {
-          slugHint.classList.add('hidden');
-        }
-      } else {
-        slugHint.classList.add('hidden');
-      }
+      slugHint.classList.add('hidden');
 
       if (!baseUrl || !source || !medium || !campaign) {
         previewEl.textContent = 'Preencha URL de destino, plataforma, tipo de tráfego e nome da campanha.';
@@ -1224,7 +1228,10 @@
       buildUtmUrl();
     });
     mediumEl.addEventListener('change', buildUtmUrl);
-    [campaignEl, urlEl, contentEl, termEl].forEach(el => el.addEventListener('input', buildUtmUrl));
+    [campaignEl, contentEl, termEl].forEach(el => {
+      el.addEventListener('input', () => { sanitizeField(el); buildUtmUrl(); });
+    });
+    urlEl.addEventListener('input', buildUtmUrl);
 
     copyBtn.addEventListener('click', () => {
       const url = copyBtn._url;
