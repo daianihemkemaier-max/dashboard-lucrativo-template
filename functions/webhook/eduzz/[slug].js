@@ -17,7 +17,7 @@ import { guardSlug } from '../_utils.js';
 export async function onRequestPost(context) {
   const { request, env, params } = context;
 
-  const slugFailure = guardSlug(params.slug, env.EDUZZ_WEBHOOK_SLUG);
+  const slugFailure = guardSlug(params.slug, env.WEBHOOK_SLUG || env.EDUZZ_WEBHOOK_SLUG);
   if (slugFailure) return slugFailure;
 
   try {
