@@ -505,6 +505,35 @@
           </div>
         </section>
 
+        <!-- Ads table -->
+        <section class="card p-5 fade-in">
+          <div class="font-semibold mb-1">Anúncios ativos</div>
+          <div class="text-xs mb-4" style="color:var(--muted)">Dados da conta de anúncios Meta, agrupados por anúncio</div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="text-xs uppercase tracking-wider border-b" style="color:var(--dim);border-color:var(--border)">
+                <tr>
+                  <th class="text-left py-2 pr-3">Anúncio</th>
+                  <th class="text-left py-2 pr-3">Conjunto</th>
+                  <th class="text-left py-2 pr-3">Campanha</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Custo</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Impressões</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Cliques</th>
+                  <th class="text-right py-2 pr-3">CTR</th>
+                  <th class="text-right py-2">CPC</th>
+                </tr>
+              </thead>
+              <tbody id="ads-tbody" class="mono">
+                <tr>
+                  <td colspan="8" class="py-10 text-center" style="color:var(--muted)">
+                    Configure o Meta Ads para ver dados de anúncios
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <footer class="pt-4 pb-10 text-xs text-center" style="color:var(--muted)">
           Dashboard Lucrativo &middot; Cloudflare Pages
         </footer>
@@ -899,37 +928,75 @@
     if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
   }
 
-  function applyFilterCampaigns() {
-    const tipo      = qs('#filter-tipo').value.trim().toLowerCase();
-    const campId    = qs('#filter-campanha').value;
-    const conjId    = qs('#filter-conjunto').value;
-    const anuncio   = qs('#filter-anuncio').value.trim().toLowerCase();
-
-    // Populate Conjunto options based on selected campaign
-    const conjSel = qs('#filter-conjunto');
-    const prevConj = conjSel.value;
-    while (conjSel.options.length > 1) conjSel.remove(1);
-    if (campId) {
-      const camp = allCampaigns.find(c => c.campaign_id === campId);
-      for (const a of (camp?.adsets || [])) {
-        const opt = document.createElement('option');
-        opt.value = a.adset_id;
-        opt.textContent = a.adset_name || a.adset_id;
-        conjSel.appendChild(opt);
+  function collectConjuntos(campaigns) {
+    const map = new Map();
+    for (const c of campaigns) {
+      for (const a of (c.adsets || [])) {
+        if (!map.has(a.adset_id)) map.set(a.adset_id, a.adset_name || a.adset_id);
       }
-      if ([...conjSel.options].some(o => o.value === prevConj)) conjSel.value = prevConj;
     }
+    return map;
+  }
 
-    const filtered = allCampaigns.filter(c => {
+  function collectAnuncios(campaigns, conjId) {
+    const map = new Map();
+    for (const c of campaigns) {
+      for (const a of (c.ads || [])) {
+        if (conjId && a.adset_id !== conjId) continue;
+        if (!map.has(a.ad_id)) map.set(a.ad_id, a.ad_name || a.ad_id);
+      }
+    }
+    return map;
+  }
+
+  function rebuildSelect(sel, optionsMap) {
+    const prev = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    for (const [value, label] of optionsMap) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      sel.appendChild(opt);
+    }
+    sel.value = optionsMap.has(prev) ? prev : '';
+  }
+
+  function applyFilterCampaigns() {
+    const tipo   = qs('#filter-tipo').value.trim().toLowerCase();
+    const campId = qs('#filter-campanha').value;
+
+    // Campaigns in scope: narrowed only by Tipo + Campanha
+    const scoped = allCampaigns.filter(c => {
       const name = (c.campaign_name || '').toLowerCase();
-      if (campId  && c.campaign_id !== campId)       return false;
-      if (tipo    && !name.includes(tipo))            return false;
-      if (conjId  && !c.adsets?.some(a => a.adset_id === conjId)) return false;
-      if (anuncio && !name.includes(anuncio))         return false;
+      if (campId && c.campaign_id !== campId) return false;
+      if (tipo   && !name.includes(tipo))      return false;
       return true;
     });
 
-    renderCampaignsTable(filtered);
+    // Conjunto options come from campaigns in scope
+    const conjSel   = qs('#filter-conjunto');
+    const conjuntos = collectConjuntos(scoped);
+    rebuildSelect(conjSel, conjuntos);
+    const conjId = conjSel.value;
+
+    // Anúncio options come from campaigns in scope, narrowed by Conjunto
+    const anuncioSel = qs('#filter-anuncio');
+    const anuncios    = collectAnuncios(scoped, conjId);
+    rebuildSelect(anuncioSel, anuncios);
+    const adId = anuncioSel.value;
+
+    renderCampaignsTable(scoped);
+
+    // Ads table: every ad in scope, narrowed by Conjunto + Anúncio
+    const adsRows = [];
+    for (const c of scoped) {
+      for (const a of (c.ads || [])) {
+        if (conjId && a.adset_id !== conjId) continue;
+        if (adId   && a.ad_id    !== adId)   continue;
+        adsRows.push({ ...a, campaign_name: c.campaign_name, campaign_id: c.campaign_id });
+      }
+    }
+    renderAdsTable(adsRows);
   }
 
   function renderCampaignsTable(campaigns) {
@@ -955,6 +1022,29 @@
           <td class="py-2 pr-3 text-right">${c.purchases  > 0 ? fmtInt(c.purchases)  : '—'}</td>
           <td class="py-2 pr-3 text-right">${c.cpa        != null ? money(c.cpa)      : '—'}</td>
           <td class="py-2 text-right">${c.taxa_compra != null ? pct(c.taxa_compra) : '—'}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  function renderAdsTable(ads) {
+    const tbody = qs('#ads-tbody');
+    if (ads.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="py-10 text-center" style="color:var(--muted)">Configure o Meta Ads para ver dados de anúncios</td></tr>';
+      return;
+    }
+    tbody.innerHTML = ads.map(a => {
+      const ctr = a.impressions > 0 ? a.clicks / a.impressions : null;
+      const cpc = a.clicks > 0     ? a.spend  / a.clicks       : null;
+      return `
+        <tr class="row-hover border-b" style="border-color:var(--border)">
+          <td class="py-2 pr-3 font-medium">${escapeHtml(a.ad_name || a.ad_id)}</td>
+          <td class="py-2 pr-3" style="color:var(--dim)">${escapeHtml(a.adset_name || a.adset_id || '—')}</td>
+          <td class="py-2 pr-3" style="color:var(--dim)">${escapeHtml(a.campaign_name || a.campaign_id)}</td>
+          <td class="py-2 pr-3 text-right accent-amber">${a.spend > 0 ? money(a.spend) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${a.impressions > 0 ? fmtInt(a.impressions) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${a.clicks > 0 ? fmtInt(a.clicks) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${ctr != null ? pct(ctr) : '—'}</td>
+          <td class="py-2 text-right">${cpc != null ? money(cpc) : '—'}</td>
         </tr>`;
     }).join('');
   }

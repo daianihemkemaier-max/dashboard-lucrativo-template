@@ -19,7 +19,7 @@ external cron (hourly)
 POST /api/sync/meta-ads     ← this endpoint, in your deployment
      │ (guarded by x-sync-secret header)
      ▼
-Meta Marketing API          ← pulls campaign-level insights
+Meta Marketing API          ← pulls ad-level insights
      │
      ▼
 D1 ad_spend table           ← UPSERT by (platform, date, campaign_id)

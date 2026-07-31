@@ -20,7 +20,7 @@ export async function onRequestGet(context) {
   const sinceDate = ymd(new Date(since * 1000));
 
   try {
-    const [spendRow, eventCounts, purchaseRow, campaigns, adsets, firstPartyEvents, firstPartyPurchases] = await Promise.all([
+    const [spendRow, eventCounts, purchaseRow, campaigns, adsets, ads, firstPartyEvents, firstPartyPurchases] = await Promise.all([
 
       // Meta ad spend totals
       env.DB.prepare(`
@@ -79,6 +79,23 @@ export async function onRequestGet(context) {
         ORDER BY campaign_id, spend_cents DESC
       `).bind(sinceDate).all(),
 
+      // Per-ad breakdown (only rows synced at ad level)
+      env.DB.prepare(`
+        SELECT
+          campaign_id,
+          adset_id,
+          adset_name,
+          ad_id,
+          ad_name,
+          COALESCE(SUM(spend_cents),  0) AS spend_cents,
+          COALESCE(SUM(impressions),  0) AS impressions,
+          COALESCE(SUM(clicks),       0) AS clicks
+        FROM ad_spend
+        WHERE platform = 'meta' AND date >= ? AND ad_id IS NOT NULL AND ad_id != ''
+        GROUP BY campaign_id, adset_id, ad_id, ad_name
+        ORDER BY campaign_id, spend_cents DESC
+      `).bind(sinceDate).all(),
+
       // Per-campaign first-party events (PageView + InitiateCheckout)
       // Normalizes utm_campaign: replaces hyphens with spaces to match Meta campaign names
       env.DB.prepare(`
@@ -134,6 +151,21 @@ export async function onRequestGet(context) {
       });
     }
 
+    // Group ads by campaign_id
+    const adsByCampaign = {};
+    for (const a of ads.results || []) {
+      if (!adsByCampaign[a.campaign_id]) adsByCampaign[a.campaign_id] = [];
+      adsByCampaign[a.campaign_id].push({
+        adset_id:    a.adset_id,
+        adset_name:  a.adset_name,
+        ad_id:       a.ad_id,
+        ad_name:     a.ad_name,
+        spend:       Number(a.spend_cents) / 100,
+        impressions: Number(a.impressions),
+        clicks:      Number(a.clicks),
+      });
+    }
+
     return json({
       days,
       spend:                Number(spendRow?.spend_cents        || 0) / 100,
@@ -161,6 +193,7 @@ export async function onRequestGet(context) {
           cpa:                fpp.purchases > 0 ? spend / fpp.purchases : null,
           taxa_compra:        fp.checkouts  > 0 ? fpp.purchases / fp.checkouts : null,
           adsets:             adsetsByCampaign[c.campaign_id] || [],
+          ads:                adsByCampaign[c.campaign_id] || [],
         };
       }),
     });
