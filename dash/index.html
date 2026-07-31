@@ -520,12 +520,17 @@
                   <th class="text-right py-2 pr-3" style="white-space:nowrap">Impressões</th>
                   <th class="text-right py-2 pr-3" style="white-space:nowrap">Cliques</th>
                   <th class="text-right py-2 pr-3">CTR</th>
-                  <th class="text-right py-2">CPC</th>
+                  <th class="text-right py-2 pr-3">CPC</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Vis. Página</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Checkouts</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Compras</th>
+                  <th class="text-right py-2 pr-3" style="white-space:nowrap">Custo/Compra</th>
+                  <th class="text-right py-2" style="white-space:nowrap">Taxa Compra</th>
                 </tr>
               </thead>
               <tbody id="ads-tbody" class="mono">
                 <tr>
-                  <td colspan="8" class="py-10 text-center" style="color:var(--muted)">
+                  <td colspan="13" class="py-10 text-center" style="color:var(--muted)">
                     Configure o Meta Ads para ver dados de anúncios
                   </td>
                 </tr>
@@ -1029,7 +1034,7 @@
   function renderAdsTable(ads) {
     const tbody = qs('#ads-tbody');
     if (ads.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="py-10 text-center" style="color:var(--muted)">Configure o Meta Ads para ver dados de anúncios</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="13" class="py-10 text-center" style="color:var(--muted)">Configure o Meta Ads para ver dados de anúncios</td></tr>';
       return;
     }
     tbody.innerHTML = ads.map(a => {
@@ -1044,7 +1049,12 @@
           <td class="py-2 pr-3 text-right">${a.impressions > 0 ? fmtInt(a.impressions) : '—'}</td>
           <td class="py-2 pr-3 text-right">${a.clicks > 0 ? fmtInt(a.clicks) : '—'}</td>
           <td class="py-2 pr-3 text-right">${ctr != null ? pct(ctr) : '—'}</td>
-          <td class="py-2 text-right">${cpc != null ? money(cpc) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${cpc != null ? money(cpc) : '—'}</td>
+          <td class="py-2 pr-3 text-right">${a.pageviews  > 0 ? fmtInt(a.pageviews)  : '—'}</td>
+          <td class="py-2 pr-3 text-right">${a.checkouts  > 0 ? fmtInt(a.checkouts)  : '—'}</td>
+          <td class="py-2 pr-3 text-right">${a.purchases  > 0 ? fmtInt(a.purchases)  : '—'}</td>
+          <td class="py-2 pr-3 text-right">${a.cpa        != null ? money(a.cpa)      : '—'}</td>
+          <td class="py-2 text-right">${a.taxa_compra != null ? pct(a.taxa_compra) : '—'}</td>
         </tr>`;
     }).join('');
   }

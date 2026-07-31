@@ -12,12 +12,23 @@ export async function onRequestPost(context) {
     const userAgent = request.headers.get('user-agent') || '';
     const cookies = parseCookies(request.headers.get('Cookie') || '');
 
-    // Session lookup for UTM enrichment
+    // UTM enrichment — prefer whatever the client sent for this exact event
+    // (body.utm, read straight off the URL at call time); fall back to the
+    // session's current attribution when the caller doesn't send it. Either
+    // way, the value gets frozen onto this event_log row below, so a later
+    // visit overwriting sessions.utm_campaign can't retroactively change
+    // what an earlier event was attributed to.
     const sessionId = cookies['_krob_sid'] || '';
-    if (sessionId && env.DB) {
+    let utmCampaign = (body.utm && body.utm.utm_campaign) || '';
+    let utmContent  = (body.utm && body.utm.utm_content)  || '';
+    if ((!utmCampaign || !utmContent) && sessionId && env.DB) {
       try {
-        await env.DB.prepare('SELECT session_id FROM sessions WHERE session_id = ?')
+        const sessionRow = await env.DB.prepare('SELECT utm_campaign, utm_content FROM sessions WHERE session_id = ?')
           .bind(sessionId).first();
+        if (sessionRow) {
+          if (!utmCampaign) utmCampaign = sessionRow.utm_campaign || '';
+          if (!utmContent)  utmContent  = sessionRow.utm_content  || '';
+        }
       } catch (e) {
         console.error('D1 session lookup error:', e.message);
       }
@@ -40,8 +51,8 @@ export async function onRequestPost(context) {
                 sent_to_meta, meta_status_code, meta_response_ok, meta_response_body, meta_payload_sent,
                 sent_to_ga4, ga4_status_code, ga4_response_ok, ga4_response_body, ga4_payload_sent,
                 has_email, has_phone, has_name,
-                raw_email
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                raw_email, utm_campaign, utm_content
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).bind(
               sessionId, body.event_name, body.event_id, body.event_time,
               browserInfo.browser, browserInfo.version, browserInfo.os, browserInfo.isMobile ? 1 : 0,
@@ -51,7 +62,7 @@ export async function onRequestPost(context) {
               0, 0, 0, '', null,
               0, 0, 0, '', null,
               0, 0, 0,
-              ''
+              '', utmCampaign, utmContent
             ).run();
           }
         } catch (e) {
