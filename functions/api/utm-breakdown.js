@@ -59,7 +59,7 @@ export async function onRequestGet(context) {
       COALESCE(AVG(value), 0) as aov
     FROM purchase_log
     WHERE ${whereClause}
-    GROUP BY value
+    GROUP BY COALESCE(NULLIF(${dimension}, ''), '(not set)')
     ORDER BY revenue DESC
   `;
 
