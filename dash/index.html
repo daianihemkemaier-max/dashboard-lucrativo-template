@@ -985,8 +985,10 @@
     return map;
   }
 
-  function rebuildSelect(sel, optionsMap) {
-    const prev = sel.value;
+  // `desiredValue`, when given, wins over the select's current value — used
+  // to force a selection after auto-snapping to a parent campaign/conjunto.
+  function rebuildSelect(sel, optionsMap, desiredValue) {
+    const target = desiredValue !== undefined ? desiredValue : sel.value;
     while (sel.options.length > 1) sel.remove(1);
     for (const [value, label] of optionsMap) {
       const opt = document.createElement('option');
@@ -994,38 +996,80 @@
       opt.textContent = label;
       sel.appendChild(opt);
     }
-    sel.value = optionsMap.has(prev) ? prev : '';
+    sel.value = optionsMap.has(target) ? target : '';
+  }
+
+  // Picking a Conjunto or Anúncio directly (without first picking its
+  // Campanha) shouldn't leave the other selects empty — find the real
+  // parent so all 4 filters stay mutually consistent.
+  function findParentForConjunto(conjId) {
+    for (const c of allCampaigns) {
+      if (c.adsets?.some(a => a.adset_id === conjId)) return c.campaign_id;
+    }
+    return null;
+  }
+
+  function findParentForAnuncio(adId) {
+    for (const c of allCampaigns) {
+      const ad = c.ads?.find(a => a.ad_id === adId);
+      if (ad) return { campaignId: c.campaign_id, adsetId: ad.adset_id };
+    }
+    return null;
   }
 
   function applyFilterCampaigns() {
-    const tipo   = qs('#filter-tipo').value.trim().toLowerCase();
-    const campId = qs('#filter-campanha').value;
+    const tipo    = qs('#filter-tipo').value.trim().toLowerCase();
+    const campSel = qs('#filter-campanha');
+    const conjSel = qs('#filter-conjunto');
+    const anuncioSel = qs('#filter-anuncio');
 
-    // Campaigns in scope: narrowed only by Tipo + Campanha
-    const scoped = allCampaigns.filter(c => {
+    let campId = campSel.value;
+    let conjId = conjSel.value;
+    let adId   = anuncioSel.value;
+
+    // Picking a Conjunto or Anúncio directly (skipping Campanha) auto-selects
+    // its real parent(s), so all 4 filters always describe one consistent
+    // slice instead of a Conjunto/Anúncio that doesn't match the Campanha.
+    if (adId) {
+      const parent = findParentForAnuncio(adId);
+      if (parent) { campId = parent.campaignId; conjId = parent.adsetId; }
+    } else if (conjId) {
+      const parentCampId = findParentForConjunto(conjId);
+      if (parentCampId) campId = parentCampId;
+    }
+    campSel.value = campId;
+
+    // Campaigns matching Tipo + Campanha (now possibly auto-corrected above)
+    const byTypeAndCampaign = allCampaigns.filter(c => {
       const name = (c.campaign_name || '').toLowerCase();
       if (campId && c.campaign_id !== campId) return false;
       if (tipo   && !name.includes(tipo))      return false;
       return true;
     });
 
-    // Conjunto options come from campaigns in scope
-    const conjSel   = qs('#filter-conjunto');
-    const conjuntos = collectConjuntos(scoped);
-    rebuildSelect(conjSel, conjuntos);
-    const conjId = conjSel.value;
+    // Conjunto options come from campaigns matching Tipo + Campanha
+    const conjuntos = collectConjuntos(byTypeAndCampaign);
+    rebuildSelect(conjSel, conjuntos, conjId);
+    conjId = conjSel.value;
 
-    // Anúncio options come from campaigns in scope, narrowed by Conjunto
-    const anuncioSel = qs('#filter-anuncio');
-    const anuncios    = collectAnuncios(scoped, conjId);
-    rebuildSelect(anuncioSel, anuncios);
-    const adId = anuncioSel.value;
+    // Anúncio options come from the same scope, narrowed by Conjunto
+    const anuncios = collectAnuncios(byTypeAndCampaign, conjId);
+    rebuildSelect(anuncioSel, anuncios, adId);
+    adId = anuncioSel.value;
 
+    // Campanhas ativas: with the auto-snap above, byTypeAndCampaign is
+    // already just the one matching campaign whenever Conjunto/Anúncio is
+    // set — this extra membership check is a harmless safety net.
+    const scoped = byTypeAndCampaign.filter(c => {
+      if (conjId && !c.adsets?.some(a => a.adset_id === conjId)) return false;
+      if (adId   && !c.ads?.some(a => a.ad_id === adId))         return false;
+      return true;
+    });
     renderCampaignsTable(scoped);
 
-    // Ads table: every ad in scope, narrowed by Conjunto + Anúncio
+    // Ads table: every ad matching Tipo + Campanha, narrowed by Conjunto + Anúncio
     const adsRows = [];
-    for (const c of scoped) {
+    for (const c of byTypeAndCampaign) {
       for (const a of (c.ads || [])) {
         if (conjId && a.adset_id !== conjId) continue;
         if (adId   && a.ad_id    !== adId)   continue;
