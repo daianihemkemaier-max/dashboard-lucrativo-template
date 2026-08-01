@@ -10,10 +10,18 @@
 // inconsistent compared to the purchase data sent via HTTP request.
 //
 // Per-ad funnel numbers (pageviews/checkouts/purchases inside `ads[]`) are
-// matched via utm_content, by convention holding the ad's name — same
-// hyphen-insensitive matching as utm_campaign, keyed together as
-// "campaign|content" so the same creative name across two campaigns
-// doesn't collide.
+// matched via utm_content, by convention holding the ad's name, keyed
+// together with the campaign as "campaign|content" so the same creative
+// name across two campaigns doesn't collide.
+//
+// Matching a UTM back to a Meta campaign/ad name is normalized(), not a
+// literal string compare: real campaign names commonly carry brackets,
+// colons, pipes, emoji — symbols a URL-safe UTM slug can't reproduce.
+// Both sides get reduced to only [a-z0-9] before comparing, so
+// "[26C - Descoberta]" and a UTM of "26c-descoberta" (or "26C_Descoberta",
+// or any other separator choice) match on their shared alphanumeric
+// fingerprint instead of requiring the slug to reconstruct the exact
+// original punctuation.
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -103,16 +111,18 @@ export async function onRequestGet(context) {
         ORDER BY campaign_id, spend_cents DESC
       `).bind(sinceDate).all(),
 
-      // Per-campaign first-party events (PageView + InitiateCheckout)
-      // Normalizes utm_campaign: replaces hyphens with spaces to match Meta campaign names.
-      // Reads utm_campaign frozen on the event_log row itself (see migration
-      // 0018) instead of joining the mutable sessions row — a session's
-      // utm_campaign gets overwritten on every new visit, which used to
-      // silently reattribute a returning visitor's earlier events to
-      // whatever campaign they most recently arrived from.
+      // Per-campaign first-party events (PageView + InitiateCheckout).
+      // Grouped by the raw utm_campaign — merging different raw spellings
+      // that share the same normalized() fingerprint happens in JS below,
+      // since SQLite has no regex-strip to do it here. Reads utm_campaign
+      // frozen on the event_log row itself (see migration 0018) instead of
+      // joining the mutable sessions row — a session's utm_campaign gets
+      // overwritten on every new visit, which used to silently reattribute
+      // a returning visitor's earlier events to whatever campaign they most
+      // recently arrived from.
       env.DB.prepare(`
         SELECT
-          LOWER(REPLACE(utm_campaign, '-', ' ')) AS norm_campaign,
+          utm_campaign,
           SUM(CASE WHEN event_name = 'PageView'          THEN 1 ELSE 0 END) AS pageviews,
           SUM(CASE WHEN event_name = 'InitiateCheckout'  THEN 1 ELSE 0 END) AS checkouts
         FROM event_log
@@ -120,22 +130,22 @@ export async function onRequestGet(context) {
           AND timestamp >= ?
           AND utm_campaign != ''
           AND event_name IN ('PageView', 'InitiateCheckout')
-        GROUP BY norm_campaign
+        GROUP BY utm_campaign
       `).bind(since).all(),
 
       // Per-campaign purchases from purchase_log
       env.DB.prepare(`
         SELECT
-          LOWER(REPLACE(utm_campaign, '-', ' ')) AS norm_campaign,
+          utm_campaign,
           COUNT(*) AS purchases,
           COALESCE(SUM(value), 0) AS revenue
         FROM purchase_log
         WHERE created_at >= ?
           AND utm_campaign != ''
-        GROUP BY norm_campaign
+        GROUP BY utm_campaign
       `).bind(since).all(),
 
-      // Per-ad first-party events (PageView + InitiateCheckout)
+      // Per-ad first-party events (PageView + InitiateCheckout).
       // utm_content carries the ad name (see teste.html convention). Keyed by
       // campaign+content together since the same creative name could be
       // reused across different campaigns. Reads straight off event_log
@@ -143,8 +153,8 @@ export async function onRequestGet(context) {
       // campaign-level query above.
       env.DB.prepare(`
         SELECT
-          LOWER(REPLACE(utm_campaign, '-', ' ')) AS norm_campaign,
-          LOWER(utm_content) AS norm_content,
+          utm_campaign,
+          utm_content,
           SUM(CASE WHEN event_name = 'PageView'          THEN 1 ELSE 0 END) AS pageviews,
           SUM(CASE WHEN event_name = 'InitiateCheckout'  THEN 1 ELSE 0 END) AS checkouts
         FROM event_log
@@ -153,45 +163,58 @@ export async function onRequestGet(context) {
           AND utm_campaign != ''
           AND utm_content != ''
           AND event_name IN ('PageView', 'InitiateCheckout')
-        GROUP BY norm_campaign, norm_content
+        GROUP BY utm_campaign, utm_content
       `).bind(since).all(),
 
       // Per-ad purchases from purchase_log
       env.DB.prepare(`
         SELECT
-          LOWER(REPLACE(utm_campaign, '-', ' ')) AS norm_campaign,
-          LOWER(utm_content) AS norm_content,
+          utm_campaign,
+          utm_content,
           COUNT(*) AS purchases,
           COALESCE(SUM(value), 0) AS revenue
         FROM purchase_log
         WHERE created_at >= ?
           AND utm_campaign != ''
           AND utm_content != ''
-        GROUP BY norm_campaign, norm_content
+        GROUP BY utm_campaign, utm_content
       `).bind(since).all(),
     ]);
 
     const evMap = {};
     for (const r of eventCounts.results || []) evMap[r.event_name] = Number(r.cnt || 0);
 
-    // Index first-party data by normalized campaign name
+    // Index first-party data by normalized campaign name — merges any raw
+    // utm_campaign spellings that share the same alphanumeric fingerprint.
     const fpEvents = {};
     for (const r of firstPartyEvents.results || []) {
-      fpEvents[r.norm_campaign] = { pageviews: Number(r.pageviews || 0), checkouts: Number(r.checkouts || 0) };
+      const k = normalize(r.utm_campaign);
+      const acc = fpEvents[k] || (fpEvents[k] = { pageviews: 0, checkouts: 0 });
+      acc.pageviews += Number(r.pageviews || 0);
+      acc.checkouts += Number(r.checkouts || 0);
     }
     const fpPurchases = {};
     for (const r of firstPartyPurchases.results || []) {
-      fpPurchases[r.norm_campaign] = { purchases: Number(r.purchases || 0), revenue: Number(r.revenue || 0) };
+      const k = normalize(r.utm_campaign);
+      const acc = fpPurchases[k] || (fpPurchases[k] = { purchases: 0, revenue: 0 });
+      acc.purchases += Number(r.purchases || 0);
+      acc.revenue += Number(r.revenue || 0);
     }
 
     // Index first-party ad-level data by "normalized campaign|normalized content"
     const fpAdEvents = {};
     for (const r of firstPartyAdEvents.results || []) {
-      fpAdEvents[`${r.norm_campaign}|${r.norm_content}`] = { pageviews: Number(r.pageviews || 0), checkouts: Number(r.checkouts || 0) };
+      const k = `${normalize(r.utm_campaign)}|${normalize(r.utm_content)}`;
+      const acc = fpAdEvents[k] || (fpAdEvents[k] = { pageviews: 0, checkouts: 0 });
+      acc.pageviews += Number(r.pageviews || 0);
+      acc.checkouts += Number(r.checkouts || 0);
     }
     const fpAdPurchases = {};
     for (const r of firstPartyAdPurchases.results || []) {
-      fpAdPurchases[`${r.norm_campaign}|${r.norm_content}`] = { purchases: Number(r.purchases || 0), revenue: Number(r.revenue || 0) };
+      const k = `${normalize(r.utm_campaign)}|${normalize(r.utm_content)}`;
+      const acc = fpAdPurchases[k] || (fpAdPurchases[k] = { purchases: 0, revenue: 0 });
+      acc.purchases += Number(r.purchases || 0);
+      acc.revenue += Number(r.revenue || 0);
     }
 
     // Group adsets by campaign_id
@@ -233,13 +256,13 @@ export async function onRequestGet(context) {
       checkouts:            evMap['InitiateCheckout'] || 0,
       purchases:            Number(purchaseRow?.cnt   || 0),
       campaigns: (campaigns.results || []).map(c => {
-        const key = c.campaign_name.toLowerCase();
+        const key = normalize(c.campaign_name);
         const fp  = fpEvents[key]    || { pageviews: 0, checkouts: 0 };
         const fpp = fpPurchases[key] || { purchases: 0, revenue: 0 };
         const spend = Number(c.spend_cents) / 100;
 
         const ads = (adsByCampaign[c.campaign_id] || []).map(a => {
-          const adKey = `${key}|${(a.ad_name || '').toLowerCase()}`;
+          const adKey = `${key}|${normalize(a.ad_name)}`;
           const adFp  = fpAdEvents[adKey]    || { pageviews: 0, checkouts: 0 };
           const adFpp = fpAdPurchases[adKey] || { purchases: 0, revenue: 0 };
           return {
@@ -272,6 +295,13 @@ export async function onRequestGet(context) {
   } catch (err) {
     return json({ error: err.message }, 500);
   }
+}
+
+// Reduces a name to its shared alphanumeric fingerprint (lowercase, no
+// spaces/punctuation/symbols) so a UTM slug and a Meta campaign/ad name that
+// differ only in separators or symbols still match. See file header comment.
+function normalize(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 function ymd(d) {

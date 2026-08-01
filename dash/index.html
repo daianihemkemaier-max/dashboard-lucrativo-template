@@ -323,7 +323,6 @@
         <!-- Filter bar -->
         <div class="flex items-center justify-between flex-wrap gap-3 fade-in">
           <div class="flex items-center gap-2 flex-wrap">
-            <select class="filter-select" id="filter-tipo"><option value="">Tipo de Campanha</option><option>Conversão</option><option>Remarketing</option><option>Relacionamento</option><option>Descoberta</option></select>
             <select class="filter-select" id="filter-campanha"><option value="">Campanha</option></select>
             <select class="filter-select" id="filter-conjunto"><option value="">Conjunto</option></select>
             <select class="filter-select" id="filter-anuncio"><option value="">Anúncio</option></select>
@@ -1021,7 +1020,6 @@
   }
 
   function applyFilterCampaigns() {
-    const tipo    = qs('#filter-tipo').value.trim().toLowerCase();
     const campSel = qs('#filter-campanha');
     const conjSel = qs('#filter-conjunto');
     const anuncioSel = qs('#filter-anuncio');
@@ -1042,37 +1040,35 @@
     }
     campSel.value = campId;
 
-    // Campaigns matching Tipo + Campanha (now possibly auto-corrected above)
-    const byTypeAndCampaign = allCampaigns.filter(c => {
-      const name = (c.campaign_name || '').toLowerCase();
+    // Campaigns matching Campanha (now possibly auto-corrected above)
+    const byCampaign = allCampaigns.filter(c => {
       if (campId && c.campaign_id !== campId) return false;
-      if (tipo   && !name.includes(tipo))      return false;
       return true;
     });
 
-    // Conjunto options come from campaigns matching Tipo + Campanha
-    const conjuntos = collectConjuntos(byTypeAndCampaign);
+    // Conjunto options come from campaigns matching Campanha
+    const conjuntos = collectConjuntos(byCampaign);
     rebuildSelect(conjSel, conjuntos, conjId);
     conjId = conjSel.value;
 
     // Anúncio options come from the same scope, narrowed by Conjunto
-    const anuncios = collectAnuncios(byTypeAndCampaign, conjId);
+    const anuncios = collectAnuncios(byCampaign, conjId);
     rebuildSelect(anuncioSel, anuncios, adId);
     adId = anuncioSel.value;
 
-    // Campanhas ativas: with the auto-snap above, byTypeAndCampaign is
-    // already just the one matching campaign whenever Conjunto/Anúncio is
-    // set — this extra membership check is a harmless safety net.
-    const scoped = byTypeAndCampaign.filter(c => {
+    // Campanhas ativas: with the auto-snap above, byCampaign is already
+    // just the one matching campaign whenever Conjunto/Anúncio is set —
+    // this extra membership check is a harmless safety net.
+    const scoped = byCampaign.filter(c => {
       if (conjId && !c.adsets?.some(a => a.adset_id === conjId)) return false;
       if (adId   && !c.ads?.some(a => a.ad_id === adId))         return false;
       return true;
     });
     renderCampaignsTable(scoped);
 
-    // Ads table: every ad matching Tipo + Campanha, narrowed by Conjunto + Anúncio
+    // Ads table: every ad matching Campanha, narrowed by Conjunto + Anúncio
     const adsRows = [];
-    for (const c of byTypeAndCampaign) {
+    for (const c of byCampaign) {
       for (const a of (c.ads || [])) {
         if (conjId && a.adset_id !== conjId) continue;
         if (adId   && a.ad_id    !== adId)   continue;
@@ -1085,7 +1081,7 @@
     // account-wide totals (including traffic with no utm_campaign); any
     // filter active recomputes from the currently scoped rows — ad-level
     // rows when Conjunto/Anúncio narrows further, campaign-level otherwise.
-    const anyFilterActive = tipo || campId || conjId || adId;
+    const anyFilterActive = campId || conjId || adId;
     if (!anyFilterActive) {
       renderTopMetrics(accountTotals);
     } else if (conjId || adId) {
@@ -1314,11 +1310,11 @@
       loadUtm();
     });
   });
-  ['#filter-tipo','#filter-campanha','#filter-conjunto','#filter-anuncio'].forEach(id => {
+  ['#filter-campanha','#filter-conjunto','#filter-anuncio'].forEach(id => {
     qs(id).addEventListener('change', applyFilterCampaigns);
   });
   qs('#filter-clear').addEventListener('click', () => {
-    ['#filter-tipo','#filter-campanha','#filter-conjunto','#filter-anuncio'].forEach(id => { qs(id).value = ''; });
+    ['#filter-campanha','#filter-conjunto','#filter-anuncio'].forEach(id => { qs(id).value = ''; });
     applyFilterCampaigns();
   });
   qs('#modal-close').addEventListener('click', closeModal);
