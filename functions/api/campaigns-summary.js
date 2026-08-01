@@ -93,9 +93,10 @@ export async function onRequestGet(context) {
           adset_name,
           ad_id,
           ad_name,
-          COALESCE(SUM(spend_cents),  0) AS spend_cents,
-          COALESCE(SUM(impressions),  0) AS impressions,
-          COALESCE(SUM(clicks),       0) AS clicks
+          COALESCE(SUM(spend_cents),        0) AS spend_cents,
+          COALESCE(SUM(impressions),        0) AS impressions,
+          COALESCE(SUM(clicks),             0) AS clicks,
+          COALESCE(SUM(landing_page_views), 0) AS landing_page_views
         FROM ad_spend
         WHERE platform = 'meta' AND date >= ? AND ad_id IS NOT NULL AND ad_id != ''
         GROUP BY campaign_id, adset_id, ad_id, ad_name
@@ -218,6 +219,7 @@ export async function onRequestGet(context) {
         spend:       Number(a.spend_cents) / 100,
         impressions: Number(a.impressions),
         clicks:      Number(a.clicks),
+        landing_page_views: Number(a.landing_page_views),
       });
     }
 

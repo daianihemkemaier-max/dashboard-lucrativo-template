@@ -771,6 +771,7 @@
   let revenueChart = null;
   let productsChart = null;
   let allCampaigns = [];
+  let accountTotals = { spend: 0, impressions: 0, clicks: 0, landing_page_views: 0, pageviews: 0, checkouts: 0, purchases: 0 };
 
   // -------- Helpers --------
   const fetchJson = path => fetch(`${path}${path.includes('?') ? '&' : '?'}key=${encodeURIComponent(key)}`).then(r => r.json());
@@ -877,23 +878,24 @@
     });
   }
 
-  async function loadCampaigns(days) {
-    const d = await fetchJson(`/api/campaigns-summary?days=${days}`);
-
-    const spend      = d.spend      || 0;
-    const impressions = d.impressions || 0;
-    const clicks     = d.clicks     || 0;
-    const pageviews  = d.pageviews  || 0;
-    const checkouts  = d.checkouts  || 0;
-    const purchases  = d.purchases  || 0;
+  // Renders the top KPI cards + conversion funnel from any {spend, impressions,
+  // clicks, landing_page_views, pageviews, checkouts, purchases} scope — either
+  // the account-wide totals (no filter active) or a sum over whatever the
+  // Campanha/Conjunto/Anúncio filters currently narrow down to.
+  function renderTopMetrics(scope) {
+    const spend       = scope.spend       || 0;
+    const impressions = scope.impressions || 0;
+    const clicks      = scope.clicks      || 0;
+    const pageviews    = scope.pageviews    || 0;
+    const checkouts    = scope.checkouts    || 0;
+    const purchases     = scope.purchases     || 0;
+    const metaLPV      = scope.landing_page_views || 0;
 
     qs('#camp-invest').textContent       = spend > 0       ? money(spend)                          : '—';
     qs('#camp-compras').textContent      = purchases > 0   ? fmtInt(purchases)                     : '—';
     qs('#camp-cpa').textContent          = (spend > 0 && purchases > 0) ? money(spend / purchases) : '—';
     qs('#camp-taxa-compra').textContent  = (purchases > 0 && checkouts > 0) ? pct(purchases / checkouts) : '—';
     qs('#camp-taxa-conv').textContent    = (checkouts > 0 && pageviews > 0) ? pct(checkouts / pageviews)  : '—';
-
-    const metaLPV = d.meta_landing_page_views || 0;
 
     qs('#f-impressoes').textContent       = impressions > 0 ? fmtInt(impressions) : '—';
     qs('#f-cliques').textContent          = clicks      > 0 ? fmtInt(clicks)      : '—';
@@ -914,6 +916,35 @@
     qs('#f-custo-vis').textContent     = (spend > 0 && pageviews > 0)   ? money(spend / pageviews)          : '—';
     qs('#f-custo-checkout').textContent= (spend > 0 && checkouts > 0)   ? money(spend / checkouts)          : '—';
     qs('#f-custo-compra').textContent  = (spend > 0 && purchases > 0)   ? money(spend / purchases)          : '—';
+  }
+
+  function sumMetrics(rows) {
+    const agg = { spend: 0, impressions: 0, clicks: 0, landing_page_views: 0, pageviews: 0, checkouts: 0, purchases: 0 };
+    for (const r of rows) {
+      agg.spend              += r.spend              || 0;
+      agg.impressions         += r.impressions         || 0;
+      agg.clicks              += r.clicks              || 0;
+      agg.landing_page_views  += r.landing_page_views  || 0;
+      agg.pageviews           += r.pageviews           || 0;
+      agg.checkouts           += r.checkouts           || 0;
+      agg.purchases           += r.purchases           || 0;
+    }
+    return agg;
+  }
+
+  async function loadCampaigns(days) {
+    const d = await fetchJson(`/api/campaigns-summary?days=${days}`);
+
+    accountTotals = {
+      spend: d.spend || 0,
+      impressions: d.impressions || 0,
+      clicks: d.clicks || 0,
+      landing_page_views: d.meta_landing_page_views || 0,
+      pageviews: d.pageviews || 0,
+      checkouts: d.checkouts || 0,
+      purchases: d.purchases || 0,
+    };
+    renderTopMetrics(accountTotals);
 
     allCampaigns = d.campaigns || [];
     populateCampaignSelect(allCampaigns);
@@ -1002,6 +1033,19 @@
       }
     }
     renderAdsTable(adsRows);
+
+    // Top KPI cards + funnel follow the filter too: no filter at all shows
+    // account-wide totals (including traffic with no utm_campaign); any
+    // filter active recomputes from the currently scoped rows — ad-level
+    // rows when Conjunto/Anúncio narrows further, campaign-level otherwise.
+    const anyFilterActive = tipo || campId || conjId || adId;
+    if (!anyFilterActive) {
+      renderTopMetrics(accountTotals);
+    } else if (conjId || adId) {
+      renderTopMetrics(sumMetrics(adsRows));
+    } else {
+      renderTopMetrics(sumMetrics(scoped));
+    }
   }
 
   function renderCampaignsTable(campaigns) {
