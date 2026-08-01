@@ -327,6 +327,9 @@
             <select class="filter-select" id="filter-campanha"><option value="">Campanha</option></select>
             <select class="filter-select" id="filter-conjunto"><option value="">Conjunto</option></select>
             <select class="filter-select" id="filter-anuncio"><option value="">Anúncio</option></select>
+            <button id="filter-clear" type="button" class="hidden" title="Limpar filtros" style="display:none;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--card-alt);color:var(--dim);cursor:pointer;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
           </div>
           <div class="flex items-center gap-2">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1090,6 +1093,8 @@
     } else {
       renderTopMetrics(sumMetrics(scoped));
     }
+
+    qs('#filter-clear').style.display = anyFilterActive ? 'inline-flex' : 'none';
   }
 
   function renderCampaignsTable(campaigns) {
@@ -1311,6 +1316,10 @@
   });
   ['#filter-tipo','#filter-campanha','#filter-conjunto','#filter-anuncio'].forEach(id => {
     qs(id).addEventListener('change', applyFilterCampaigns);
+  });
+  qs('#filter-clear').addEventListener('click', () => {
+    ['#filter-tipo','#filter-campanha','#filter-conjunto','#filter-anuncio'].forEach(id => { qs(id).value = ''; });
+    applyFilterCampaigns();
   });
   qs('#modal-close').addEventListener('click', closeModal);
   qs('#details-modal').addEventListener('click', e => { if (e.target.id === 'details-modal') closeModal(); });
